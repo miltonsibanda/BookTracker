@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Book Collection</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="header__title">
+                <i class="fas fa-book-open"></i>
+                My Book Collection
+            </h1>
+            <div class="header__stats">
+                <div class="stat">
+                    <span class="stat__number" id="totalBooks">0</span>
+                    <span class="stat__label">Total Books</span>
+                </div>
+                <div class="stat">
+                    <span class="stat__number" id="readBooks">0</span>
+                    <span class="stat__label">Read</span>
+                </div>
+                <div class="stat">
+                    <span class="stat__number" id="currentlyReading">0</span>
+                    <span class="stat__label">Reading</span>
+                </div>
+                <div class="stat">
+                    <span class="stat__number" id="dnfBooks">0</span>
+                    <span class="stat__label">DNF</span>
+                </div>
+                <div class="stat">
+                    <span class="stat__number" id="wantToRead">0</span>
+                    <span class="stat__label">Want to Read</span>
+                </div>
+            </div>
+        </header>
+
+        <nav class="controls">
+            <div class="controls__left">
+                <button class="btn btn--primary" id="addBookBtn">
+                    <i class="fas fa-plus"></i>
+                    Add Book
+                </button>
+                <button class="btn btn--secondary" id="importBtn">
+                    <i class="fas fa-upload"></i>
+                    Import
+                </button>
+                <button class="btn btn--secondary" id="exportBtn">
+                    <i class="fas fa-download"></i>
+                    Export
+                </button>
+            </div>
+            
+            <div class="controls__center">
+                <div class="search-container">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" id="searchInput" placeholder="Search books..." class="search-input">
+                    <button class="btn btn--icon" id="clearSearch">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="controls__right">
+                <div class="filter-group">
+                    <select id="statusFilter" class="filter-select">
+                        <option value="">All Status</option>
+                        <option value="want-to-read">Want to Read</option>
+                        <option value="currently-reading">Currently Reading</option>
+                        <option value="read">Read</option>
+                        <option value="dnf">DNF</option>
+                    </select>
+                    
+                    <select id="publisherFilter" class="filter-select">
+                        <option value="">All Publishers</option>
+                    </select>
+                    
+                    <select id="sortBy" class="filter-select">
+                        <option value="title">Sort by Title</option>
+                        <option value="author">Sort by Author</option>
+                        <option value="series">Sort by Series</option>
+                        <option value="rating">Sort by Rating</option>
+                        <option value="publisher">Sort by Publisher</option>
+                        <option value="dateStarted">Sort by Date Started</option>
+                        <option value="dateFinished">Sort by Date Finished</option>
+                        <option value="dateAdded">Sort by Date Added</option>
+                    </select>
+                </div>
+                
+                <div class="view-toggle">
+                    <button class="btn btn--icon view-toggle__btn active" id="gridView">
+                        <i class="fas fa-th"></i>
+                    </button>
+                    <button class="btn btn--icon view-toggle__btn" id="listView">
+                        <i class="fas fa-list"></i>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <main class="content">
+            <div class="books-container" id="booksContainer">
+                <!-- Books will be rendered here -->
+            </div>
+            
+            <div class="empty-state" id="emptyState">
+                <div class="empty-state__icon">
+                    <i class="fas fa-book"></i>
+                </div>
+                <h2 class="empty-state__title">Your library is empty</h2>
+                <p class="empty-state__description">Start building your collection by adding your first book!</p>
+                <button class="btn btn--primary" id="addFirstBook">
+                    <i class="fas fa-plus"></i>
+                    Add Your First Book
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Book Modal -->
+    <div class="modal" id="bookModal">
+        <div class="modal__backdrop"></div>
+        <div class="modal__content modal__content--large">
+            <div class="modal__header">
+                <h2 class="modal__title" id="modalTitle">Add New Book</h2>
+                <button class="btn btn--icon modal__close" id="closeModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <form class="modal__body" id="bookForm">
+                <div class="form-tabs">
+                    <button type="button" class="form-tab active" data-tab="basic">Basic Info</button>
+                    <button type="button" class="form-tab" data-tab="details">Book Details</button>
+                    <button type="button" class="form-tab" data-tab="physical">Physical Features</button>
+                    <button type="button" class="form-tab" data-tab="reading">Reading Info</button>
+                </div>
+
+                <!-- Basic Info Tab -->
+                <div class="form-tab-content active" id="basicTab">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="bookTitle" class="form-label">Title *</label>
+                            <input type="text" id="bookTitle" name="title" class="form-input" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="bookAuthor" class="form-label">Author *</label>
+                            <input type="text" id="bookAuthor" name="author" class="form-input" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="bookSeries" class="form-label">Series Title</label>
+                            <input type="text" id="bookSeries" name="series" class="form-input">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="bookNumber" class="form-label"># In Series</label>
+                            <input type="number" id="bookNumber" name="bookNumber" class="form-input" min="1" step="0.1">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="readingStatus" class="form-label">Reading Status *</label>
+                            <select id="readingStatus" name="status" class="form-select" required>
+                                <option value="want-to-read">Want to Read</option>
+                                <option value="currently-reading">Currently Reading</option>
+                                <option value="read">Read</option>
+                                <option value="dnf">DNF (Did Not Finish)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="bookRating" class="form-label">Rating</label>
+                            <div class="rating-input">
+                                <div class="stars" id="ratingStars">
+                                    <i class="fas fa-star star" data-rating="1"></i>
+                                    <i class="fas fa-star star" data-rating="2"></i>
+                                    <i class="fas fa-star star" data-rating="3"></i>
+                                    <i class="fas fa-star star" data-rating="4"></i>
+                                    <i class="fas fa-star star" data-rating="5"></i>
+                                </div>
+                                <input type="hidden" id="bookRating" name="rating" value="0">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group form-group--full">
+                            <label for="bookNotes" class="form-label">Notes</label>
+                            <textarea id="bookNotes" name="notes" class="form-textarea" rows="3" placeholder="Add any notes about this book..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Book Details Tab -->
+                <div class="form-tab-content" id="detailsTab">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="pageCount" class="form-label">Page Count</label>
+                            <input type="number" id="pageCount" name="pageCount" class="form-input" min="1">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edition" class="form-label">Edition</label>
+                            <input type="text" id="edition" name="edition" class="form-input" placeholder="e.g., First Edition, Mass Market, etc.">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="publisher" class="form-label">Publisher</label>
+                            <input type="text" id="publisher" name="publisher" class="form-input">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="gifted" name="gifted" class="form-checkbox">
+                                Gifted
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Physical Features Tab -->
+                <div class="form-tab-content" id="physicalTab">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="digitallySigned" name="digitallySigned" class="form-checkbox">
+                                Digitally Signed
+                            </label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="signed" name="signed" class="form-checkbox">
+                                Physically Signed
+                            </label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="sprayedEdges" name="sprayedEdges" class="form-checkbox">
+                                Sprayed Edges
+                            </label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="hiddenCover" name="hiddenCover" class="form-checkbox">
+                                Hidden Cover
+                            </label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="reversibleDustJacket" name="reversibleDustJacket" class="form-checkbox">
+                                Reversible Dust Jacket
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reading Info Tab -->
+                <div class="form-tab-content" id="readingTab">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="dateStarted" class="form-label">Started Reading</label>
+                            <input type="date" id="dateStarted" name="dateStarted" class="form-input">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="dateFinished" class="form-label">Finished Reading</label>
+                            <input type="date" id="dateFinished" name="dateFinished" class="form-input">
+                        </div>
+                        
+                        <div class="form-group form-group--full">
+                            <label for="readingNotes" class="form-label">Reading Notes</label>
+                            <textarea id="readingNotes" name="readingNotes" class="form-textarea" rows="4" placeholder="Notes about your reading experience..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal__footer">
+                    <button type="button" class="btn btn--secondary" id="cancelBtn">Cancel</button>
+                    <button type="submit" class="btn btn--primary" id="saveBtn">Save Book</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal" id="deleteModal">
+        <div class="modal__backdrop"></div>
+        <div class="modal__content modal__content--small">
+            <div class="modal__header">
+                <h2 class="modal__title">Delete Book</h2>
+                <button class="btn btn--icon modal__close" id="closeDeleteModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal__body">
+                <p>Are you sure you want to delete "<span id="deleteBookTitle"></span>"? This action cannot be undone.</p>
+            </div>
+            
+            <div class="modal__footer">
+                <button type="button" class="btn btn--secondary" id="cancelDeleteBtn">Cancel</button>
+                <button type="button" class="btn btn--danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- File Input for Import -->
+    <input type="file" id="fileInput" accept=".json" style="display: none;">
+
+    <script src="script.js"></script>
+</body>
+</html>

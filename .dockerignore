@@ -1,0 +1,36 @@
+# Backup files
+*.backup*
+*.backup-*
+*-backup*
+
+# Test files
+test_*.html
+*-test.html
+minimal-test.html
+
+# Development files
+*.js.backup*
+*.css.backup*
+*.html.backup*
+integration-attempts/
+fix_rating_system.js
+update_rating_system.js
+add_physical_features.js
+
+# CSV and conversion files
+*.csv
+csv_to_json_converter.py
+csv-to-json-converter.js
+imported-books.json
+import-helper.html
+
+# IDE and system files
+.DS_Store
+.vscode/
+.git/
+*.log
+node_modules/
+
+# Temporary files
+*.tmp
+*.temp

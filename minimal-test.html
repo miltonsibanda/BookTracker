@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minimal BookTracker Test</title>
+</head>
+<body>
+    <h1>BookTracker Minimal Test</h1>
+    <div id="status"></div>
+    <button onclick="testLoad()">Test Load</button>
+    <button onclick="testSave()">Test Save</button>
+    <button onclick="clearStorage()">Clear Storage</button>
+    
+    <script>
+        function updateStatus(msg) {
+            document.getElementById('status').innerHTML += '<p>' + msg + '</p>';
+        }
+        
+        function testLoad() {
+            updateStatus('Testing localStorage load...');
+            try {
+                const stored = localStorage.getItem('bookTracker_books');
+                if (stored) {
+                    const books = JSON.parse(stored);
+                    updateStatus(`✅ Found ${books.length} books in localStorage`);
+                    books.forEach((book, i) => {
+                        updateStatus(`  Book ${i+1}: ${book.title} by ${book.author}`);
+                    });
+                } else {
+                    updateStatus('❌ No books found in localStorage');
+                }
+            } catch (error) {
+                updateStatus('❌ Error loading: ' + error.message);
+            }
+        }
+        
+        function testSave() {
+            updateStatus('Testing localStorage save...');
+            const testBooks = [
+                {
+                    id: 'test-1', 
+                    title: 'Test Book',
+                    author: 'Test Author',
+                    dateAdded: new Date().toISOString()
+                }
+            ];
+            
+            try {
+                localStorage.setItem('bookTracker_books', JSON.stringify(testBooks));
+                updateStatus('✅ Test book saved successfully');
+            } catch (error) {
+                updateStatus('❌ Error saving: ' + error.message);
+            }
+        }
+        
+        function clearStorage() {
+            localStorage.removeItem('bookTracker_books');
+            updateStatus('🗑️ Storage cleared');
+        }
+        
+        // Auto test on load
+        testLoad();
+    </script>
+</body>
+</html>

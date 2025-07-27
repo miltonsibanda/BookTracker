@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Recover Books</title>
+</head>
+<body>
+    <h1>Book Recovery Tool</h1>
+    <button onclick="checkAndRecover()">Check & Recover Books</button>
+    <button onclick="clearAll()">Clear All Storage</button>
+    <div id="output"></div>
+    
+    <script>
+        function checkAndRecover() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<h2>Checking localStorage...</h2>';
+            
+            // Check all possible keys
+            const possibleKeys = [
+                'bookTracker_books',
+                'bookTrackerBooks', 
+                'books',
+                'bookTracker',
+                'booktracker_books'
+            ];
+            
+            let foundBooks = null;
+            let foundKey = null;
+            
+            possibleKeys.forEach(key => {
+                const stored = localStorage.getItem(key);
+                if (stored) {
+                    output.innerHTML += `<p>Found data in key: <strong>${key}</strong></p>`;
+                    try {
+                        const parsed = JSON.parse(stored);
+                        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].title) {
+                            output.innerHTML += `<p>✅ Valid book data: ${parsed.length} books</p>`;
+                            if (!foundBooks || parsed.length > foundBooks.length) {
+                                foundBooks = parsed;
+                                foundKey = key;
+                            }
+                        }
+                    } catch (e) {
+                        output.innerHTML += `<p>❌ Invalid JSON in ${key}</p>`;
+                    }
+                }
+            });
+            
+            if (foundBooks && foundKey !== 'bookTracker_books') {
+                output.innerHTML += `<h3>Recovery needed!</h3>`;
+                output.innerHTML += `<p>Found ${foundBooks.length} books in key: ${foundKey}</p>`;
+                output.innerHTML += `<button onclick="recoverBooks('${foundKey}')">Recover Books</button>`;
+            } else if (foundBooks) {
+                output.innerHTML += `<h3>Books found in correct location</h3>`;
+                output.innerHTML += `<p>${foundBooks.length} books in bookTracker_books</p>`;
+            } else {
+                output.innerHTML += `<h3>No books found in any location</h3>`;
+            }
+        }
+        
+        function recoverBooks(sourceKey) {
+            const stored = localStorage.getItem(sourceKey);
+            if (stored) {
+                localStorage.setItem('bookTracker_books', stored);
+                document.getElementById('output').innerHTML += `<p>✅ Books recovered from ${sourceKey} to bookTracker_books</p>`;
+            }
+        }
+        
+        function clearAll() {
+            localStorage.clear();
+            document.getElementById('output').innerHTML = '<p>All localStorage cleared</p>';
+        }
+        
+        // Auto-check on load
+        checkAndRecover();
+    </script>
+</body>
+</html>

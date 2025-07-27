@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rating System Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div style="padding: 20px;">
+        <h2>Test Rating System</h2>
+        <div class="form-group">
+            <label for="bookRating" class="form-label">Rating</label>
+            <div class="rating-input">
+                <div class="half-stars" id="ratingStars">
+                    <i class="fas fa-star star" data-rating="1" data-star="1"></i>
+                    <i class="fas fa-star star" data-rating="2" data-star="2"></i>
+                    <i class="fas fa-star star" data-rating="3" data-star="3"></i>
+                    <i class="fas fa-star star" data-rating="4" data-star="4"></i>
+                    <i class="fas fa-star star" data-rating="5" data-star="5"></i>
+                </div>
+                <span class="rating-display-text" id="ratingText">No rating</span>
+                <input type="hidden" id="bookRating" name="rating" value="0">
+            </div>
+        </div>
+        <div style="margin-top: 20px;">
+            <p>Current Rating: <span id="currentRating">0</span></p>
+            <button onclick="testRating()">Test Different Ratings</button>
+        </div>
+    </div>
+
+    <script>
+        class TestRating {
+            setupRatingInputs() {
+                const stars = document.querySelectorAll('#ratingStars .star');
+                
+                stars.forEach((star, index) => {
+                    const starNumber = index + 1;
+                    
+                    // Add click event for each star
+                    star.addEventListener('click', (e) => {
+                        const rect = star.getBoundingClientRect();
+                        const clickX = e.clientX - rect.left;
+                        const starWidth = rect.width;
+                        
+                        // Determine if clicking left half (half star) or right half (full star)
+                        const rating = clickX < starWidth / 2 ? starNumber - 0.5 : starNumber;
+                        
+                        this.setRating(rating);
+                    });
+                    
+                    // Add hover effect for visual feedback
+                    star.addEventListener('mousemove', (e) => {
+                        const rect = star.getBoundingClientRect();
+                        const hoverX = e.clientX - rect.left;
+                        const starWidth = rect.width;
+                        
+                        // Show preview of what would be selected
+                        const rating = hoverX < starWidth / 2 ? starNumber - 0.5 : starNumber;
+                        this.highlightRating(rating);
+                    });
+                });
+
+                // Reset to current rating when mouse leaves the rating area
+                document.getElementById('ratingStars').addEventListener('mouseleave', () => {
+                    const currentRating = parseFloat(document.getElementById('bookRating').value) || 0;
+                    this.highlightRating(currentRating);
+                });
+            }
+
+            setRating(value) {
+                const hiddenInput = document.getElementById('bookRating');
+                const ratingText = document.getElementById('ratingText');
+                const currentRatingSpan = document.getElementById('currentRating');
+                
+                hiddenInput.value = value;
+                currentRatingSpan.textContent = value;
+                
+                if (value === 0) {
+                    ratingText.textContent = 'No rating';
+                } else {
+                    ratingText.textContent = `${value} star${value !== 1 ? 's' : ''}`;
+                }
+                
+                this.highlightRating(value);
+            }
+
+            highlightRating(value) {
+                const stars = document.querySelectorAll('#ratingStars .star');
+                
+                stars.forEach((star, index) => {
+                    const starNumber = index + 1;
+                    star.classList.remove('active', 'half');
+                    
+                    if (starNumber <= Math.floor(value)) {
+                        // Full star
+                        star.classList.add('active');
+                    } else if (starNumber === Math.floor(value) + 1 && value % 1 !== 0) {
+                        // Half star (for the next star when we have a decimal)
+                        star.classList.add('half');
+                    }
+                });
+            }
+        }
+
+        const testRating = new TestRating();
+        testRating.setupRatingInputs();
+
+        // Test function to cycle through different ratings
+        let testIndex = 0;
+        const testValues = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
+        function testRating() {
+            testRating.setRating(testValues[testIndex]);
+            testIndex = (testIndex + 1) % testValues.length;
+        }
+    </script>
+</body>
+</html>

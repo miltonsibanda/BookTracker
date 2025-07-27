@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Storage</title>
+</head>
+<body>
+    <h1>localStorage Debug</h1>
+    <div id="output"></div>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        // Check what keys exist in localStorage
+        output.innerHTML += '<h2>All localStorage keys:</h2>';
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            output.innerHTML += `<p><strong>${key}:</strong> ${localStorage.getItem(key).substring(0, 100)}...</p>`;
+        }
+        
+        // Check specifically for book-related keys
+        const bookTrackerBooks = localStorage.getItem('bookTracker_books');
+        const bookTrackerBooksAlt = localStorage.getItem('bookTrackerBooks');
+        
+        output.innerHTML += '<h2>Book-related keys:</h2>';
+        output.innerHTML += `<p><strong>bookTracker_books:</strong> ${bookTrackerBooks ? 'Found - ' + bookTrackerBooks.length + ' characters' : 'Not found'}</p>`;
+        output.innerHTML += `<p><strong>bookTrackerBooks:</strong> ${bookTrackerBooksAlt ? 'Found - ' + bookTrackerBooksAlt.length + ' characters' : 'Not found'}</p>`;
+        
+        if (bookTrackerBooks) {
+            try {
+                const parsed = JSON.parse(bookTrackerBooks);
+                output.innerHTML += `<p>Parsed books count: ${parsed.length}</p>`;
+            } catch (e) {
+                output.innerHTML += `<p>Error parsing: ${e.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
