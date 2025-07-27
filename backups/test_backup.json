@@ -1,0 +1,10 @@
+[
+  {
+    "id": "test-book-1",
+    "title": "Test Cross-Browser Book",
+    "author": "Test Author",
+    "status": "read",
+    "rating": 5,
+    "dateAdded": "2025-07-27T19:02:06.3NZ"
+  }
+]

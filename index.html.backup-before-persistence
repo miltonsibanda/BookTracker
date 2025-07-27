@@ -380,7 +380,6 @@
     <!-- File Input for Import -->
     <input type="file" id="fileInput" accept=".json" style="display: none;">
 
-    <script src="data-persistence.js"></script>
-    <script src="script-with-persistence.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

@@ -1,480 +1,298 @@
 # 📚 BookTracker
 
-A modern, responsive web application for managing your personal book collection with advanced rating features and multiple deployment options.
-
-![BookTracker Screenshot](https://img.shields.io/badge/Status-Production%20Ready-green)
-![Docker](https://img.shields.io/badge/Docker-Supported-blue)
-![Proxmox](https://img.shields.io/badge/Proxmox%20LXC-Supported-orange)
-![License](https://img.shields.io/badge/License-MIT-blue)
+A modern, containerized personal book collection manager with **cross-browser data persistence**. Built with vanilla JavaScript, Node.js backend, and Docker for easy deployment.
 
 ## ✨ Features
 
-- 📖 **Book Management** - Add, edit, delete, and organize your book collection
-- ⭐ **Half-Star Rating System** - Precise rating with half-star increments (0.5 to 5.0)
-- 📱 **Responsive Design** - Works perfectly on desktop, tablet, and mobile devices
-- 💾 **Local Storage** - Data persists in your browser's local storage
-- 🔍 **Search & Filter** - Find books quickly with built-in search functionality
-- 📊 **Collection Stats** - View statistics about your reading habits
-- 🎨 **Modern UI** - Clean, intuitive interface with smooth animations
-- 🚀 **Multiple Deployment Options** - Docker, Proxmox LXC, or static hosting
+### 📖 Core Functionality
+- **Add, edit, and delete books** with comprehensive metadata
+- **Half-star rating system** (0.5 to 5.0 stars)
+- **Reading status tracking** (Want to Read, Currently Reading, Read, DNF)
+- **Advanced search and filtering** by title, author, series, publisher, and status
+- **Google Books API integration** for easy book discovery and metadata import
+- **Export/Import functionality** with JSON backup files
+
+### 🎨 Physical Book Features
+- **Digital signatures and author signatures**
+- **Sprayed edges, hidden covers, reversible dust jackets**
+- **Gift tracking and special edition notes**
+- **Comprehensive publisher and page count information**
+
+### 🔄 **NEW: Data Persistence**
+- **Cross-browser data sharing** - access your books from any browser!
+- **Persistent storage** - data survives container restarts
+- **Automatic synchronization** between browser localStorage and server
+- **Offline support** with intelligent fallback to localStorage
+- **Volume-mounted data** for true persistence in Docker
+
+### 🎯 User Experience
+- **Responsive design** that works on desktop and mobile
+- **Grid and list view options** for different preferences
+- **Keyboard shortcuts** for power users (Ctrl+N, Ctrl+F, Ctrl+S)
+- **Real-time statistics** showing reading progress
+- **Intuitive modal-based editing** with form validation
+
+### 📊 Statistics Dashboard
+- Total books in collection
+- Books read vs. want to read
+- Currently reading progress
+- DNF (Did Not Finish) tracking
 
 ## 🚀 Quick Start
 
-### Option 1: Docker (Recommended for Development)
+### Prerequisites
+- Docker and Docker Compose
+- 2GB+ available disk space
+- Port 8081 available (or modify in docker-compose.yml)
 
+### One-Command Setup
 ```bash
 # Clone the repository
 git clone https://github.com/miltonsibanda/BookTracker.git
 cd BookTracker
 
-# Start with Docker Compose
-docker compose up -d
-
-# Access the application
-open http://localhost:8081
+# Build and start with data persistence
+make install
 ```
 
-### Option 2: Proxmox LXC (Recommended for Production)
-
+### Manual Setup
 ```bash
-# Copy to Proxmox host
-scp -r proxmox-lxc/ root@your-proxmox-host:/root/
+# Build the image
+make build
 
-# SSH to Proxmox and run setup
-ssh root@your-proxmox-host
-cd /root/proxmox-lxc/
-./quick-setup.sh
-
-# Deploy application
-./deploy-to-lxc.sh 200
-```
-
-### Option 3: Static File Server (Quick Testing)
-
-```bash
-# Clone and serve
-git clone https://github.com/miltonsibanda/BookTracker.git
-cd BookTracker
-python3 -m http.server 8080
-
-# Access at http://localhost:8080
-```
-
-## 📋 Requirements
-
-### For Docker Deployment
-- Docker and Docker Compose
-- 512MB RAM (recommended)
-- Modern web browser
-
-### For Proxmox LXC Deployment
-- Proxmox VE 7.0+
-- Ubuntu 22.04 LXC template
-- 512MB RAM minimum
-- 4GB storage minimum
-
-### For Static Deployment
-- Web server (Nginx, Apache, or built-in)
-- Modern web browser
-- No additional dependencies
-
-## 🛠️ Installation & Deployment
-
-### Docker Deployment
-
-The application includes a complete Docker setup with optimized Nginx configuration:
-
-```bash
-# Using Docker Compose (recommended)
-docker compose up -d
-
-# Using Docker directly
-docker build -t booktracker .
-docker run -d -p 8081:80 --name booktracker-app booktracker
-
-# Using the build script
-./build-docker.sh
-
-# Using Makefile
+# Start the application
 make run
+
+# View logs
+make logs
 ```
 
-#### Docker Features
-- ✅ Nginx Alpine base image (lightweight)
-- ✅ Gzip compression enabled
-- ✅ Security headers configured
-- ✅ Health checks included
-- ✅ Production and development configurations
-- ✅ Automated build scripts
+### Access Your BookTracker
+Open **http://localhost:8081** in any browser 🌐
 
-### Proxmox LXC Deployment
+## 🔧 Management Commands
 
-For production deployments on Proxmox VE infrastructure:
-
+### Basic Operations
 ```bash
-# Interactive setup
-cd proxmox-lxc/
+make build      # Build Docker image
+make run        # Start with data persistence
+make stop       # Stop the application
+make restart    # Restart (preserves data)
+make logs       # View application logs
+make status     # Show system status
+make test       # Test API endpoints
+```
+
+### Data Management
+```bash
+make backup     # Create timestamped backup
+make restore BACKUP_FILE=books_backup_20250727_191200.json
+make volume-info    # Show volume details
+```
+
+### Production Deployment
+```bash
+make prod       # Deploy to production (port 80)
+```
+
+## 📚 Data Persistence Architecture
+
+BookTracker now uses a **hybrid storage approach**:
+
+### 🏗️ Storage Layers
+1. **Primary**: Node.js backend with JSON file storage
+2. **Backup**: Browser localStorage for offline access
+3. **Volume**: Docker volume for container persistence
+
+### 🌐 Cross-Browser Magic
+- Add books in **Chrome** ✅
+- View them in **Firefox** ✅  
+- Edit on **Safari** ✅
+- All data synchronized automatically! 🎉
+
+### 📡 API Endpoints
+- `GET /api/health` - Server health check
+- `GET /api/books` - Retrieve all books
+- `POST /api/books` - Save books collection
+
+## 📦 Deployment Options
+
+### 🐳 Docker (Recommended)
+```bash
+# Development
+docker compose up -d
+
+# Production
+docker compose -f docker-compose.prod.yml up -d
+```
+
+### 🖥️ Proxmox LXC
+Complete LXC deployment with automated scripts:
+```bash
+cd proxmox-lxc
 ./quick-setup.sh
-
-# Manual setup
-./setup-booktracker-lxc.sh -i 200 -n booktracker -m 512 -d 4
-
-# Deploy application
-./deploy-to-lxc.sh 200
 ```
 
-#### Proxmox LXC Features
-- ✅ Ultra-low resource overhead (~50MB RAM)
-- ✅ Live migration support
-- ✅ Built-in backup and snapshots
-- ✅ Proxmox GUI integration
-- ✅ Enterprise-grade high availability
-
-### Manual Installation
-
-For custom deployments or development:
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/miltonsibanda/BookTracker.git
-   cd BookTracker
-   ```
-
-2. **Configure web server** (Nginx example)
-   ```bash
-   sudo cp nginx.conf /etc/nginx/sites-available/booktracker
-   sudo ln -s /etc/nginx/sites-available/booktracker /etc/nginx/sites-enabled/
-   sudo systemctl reload nginx
-   ```
-
-3. **Copy application files**
-   ```bash
-   sudo cp -r * /var/www/booktracker/
-   sudo chown -R www-data:www-data /var/www/booktracker/
-   ```
-
-## 📖 Usage
-
-### Adding Books
-
-1. Click the **"Add New Book"** button
-2. Fill in the book details:
-   - Title (required)
-   - Author (required)
-   - Genre
-   - Publication Year
-   - Rating (0.5 to 5.0 stars)
-   - Personal notes
-
-3. Click **"Add Book"** to save
-
-### Rating System
-
-BookTracker features a precise half-star rating system:
-- ⭐⭐⭐⭐⭐ 5.0 stars (Outstanding)
-- ⭐⭐⭐⭐☆ 4.5 stars (Excellent)
-- ⭐⭐⭐⭐ 4.0 stars (Very Good)
-- ⭐⭐⭐☆ 3.5 stars (Good)
-- ⭐⭐⭐ 3.0 stars (Average)
-- And so on...
-
-### Managing Your Collection
-
-- **Edit Books**: Click the edit icon next to any book
-- **Delete Books**: Click the delete icon (with confirmation)
-- **Search**: Use the search bar to find specific books
-- **Filter**: Filter by genre, rating, or other criteria
-- **Sort**: Sort by title, author, rating, or date added
-
-## 🔧 Configuration
-
-### Environment Variables
-
-For production deployments, you can configure:
-
+### ☁️ Manual Installation
 ```bash
-# Docker environment
-NGINX_HOST=localhost
-NGINX_PORT=80
-APP_VERSION=1.0.0
+# Install dependencies
+npm install
 
-# Proxmox LXC environment
-CONTAINER_ID=200
-CONTAINER_NAME=booktracker
-MEMORY=512
-DISK_SIZE=4
+# Start the server
+npm start
 ```
 
-### Nginx Configuration
+## 📂 Project Structure
 
-The included Nginx configuration provides:
-- Gzip compression
-- Static file caching
-- Security headers
-- SSL/TLS ready
-- Performance optimization
+```
+BookTracker/
+├── 📄 index.html                 # Main application UI
+├── 🎨 styles.css                 # Application styling  
+├── ⚡ script-with-persistence.js # Enhanced frontend with API integration
+├── 🔄 data-persistence.js        # Data layer abstraction
+├── 🚀 server.js                  # Node.js Express backend
+├── 📦 package.json               # Node.js dependencies
+├── 🐳 Dockerfile                 # Container configuration
+├── �� docker-compose.yml         # Development deployment
+├── 🏭 docker-compose.prod.yml    # Production deployment  
+├── 🛠️ Makefile                   # Management commands
+├── 📚 README-Data-Persistence.md # Detailed persistence guide
+├── 🗂️ proxmox-lxc/               # Proxmox deployment files
+└── 📖 docs/                      # Additional documentation
+```
 
-### Customization
+## 🔄 Migration from localStorage
 
-You can customize the application by modifying:
-- `styles.css` - Visual appearance and themes
-- `script.js` - Functionality and features
-- `nginx.conf` - Web server configuration
-- Docker configurations for deployment options
+Existing BookTracker users will see **automatic migration**:
+
+1. **First Load**: App detects existing localStorage data
+2. **Auto-Upload**: Data automatically synced to server  
+3. **Cross-Browser**: Books now available everywhere
+4. **Backup Preserved**: localStorage maintained as fallback
+
+## 🛠️ Development
+
+### Local Development
+```bash
+# Install dependencies
+npm install
+
+# Start development server with hot reload
+npm run dev
+
+# Test the application
+npm test
+```
+
+### Contributing
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'Add amazing feature'`
+4. Push to branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+## 🐛 Troubleshooting
+
+### Books Not Showing in Other Browsers?
+```bash
+# Check if the API server is running
+make test
+
+# View container logs
+make logs
+
+# Check container status
+make status
+```
+
+### Data Backup and Recovery
+```bash
+# Create backup before troubleshooting
+make backup
+
+# If issues persist, restore from backup
+make restore BACKUP_FILE=your_backup_file.json
+```
+
+### Common Issues
+- **Port 8081 busy**: Modify port in `docker-compose.yml`
+- **Permission errors**: Ensure Docker daemon is running
+- **Data not persisting**: Check volume mount with `make volume-info`
 
 ## 📊 Performance
 
 ### Resource Usage
+- **Memory**: ~50MB Node.js + ~20MB Alpine Linux
+- **Disk**: ~100MB container + book data (JSON)
+- **CPU**: Minimal (event-driven architecture)
 
-| Deployment Method | RAM Usage | Storage | Startup Time |
-|-------------------|-----------|---------|--------------|
-| Docker Container | ~150MB | 100MB | 2-5 seconds |
-| Proxmox LXC | ~50MB | 300MB | 1-3 seconds |
-| Static Server | ~20MB | 10MB | <1 second |
+### Scalability
+- **Small Collections**: (<1000 books) - Excellent performance
+- **Medium Collections**: (1000-10000 books) - Good performance  
+- **Large Collections**: (>10000 books) - Consider database upgrade
 
-### Browser Compatibility
+## 🔮 Roadmap
 
-- ✅ Chrome 90+
-- ✅ Firefox 88+
-- ✅ Safari 14+
-- ✅ Edge 90+
-- ✅ Mobile browsers (iOS Safari, Chrome Mobile)
+### 🎯 Next Release (2.1)
+- [ ] User authentication and multiple collections
+- [ ] Database backend (PostgreSQL/SQLite)
+- [ ] Real-time sync across browser tabs
+- [ ] Advanced book recommendations
 
-## 🐳 Docker Details
-
-### Images and Tags
-
-```bash
-# Build locally
-docker build -t booktracker:latest .
-
-# Run with custom port
-docker run -d -p 3000:80 booktracker:latest
-
-# Use Docker Compose for development
-docker compose up -d
-
-# Use production configuration
-docker compose -f docker-compose.prod.yml up -d
-```
-
-### Docker Compose Services
-
-- **booktracker**: Main application container
-- **nginx**: Web server (Alpine-based)
-- **healthcheck**: Application health monitoring
-
-### Volumes and Networking
-
-- Application files are copied into the container
-- No persistent volumes needed (data stored in browser)
-- Configurable port mapping
-- Network bridge support
-
-## 📦 Proxmox LXC Details
-
-### Container Specifications
-
-- **Base**: Ubuntu 22.04 LTS
-- **Type**: Unprivileged container
-- **Features**: Nesting enabled
-- **Network**: Bridge mode with optional static IP
-- **Storage**: Configurable (local-lvm, ZFS, etc.)
-
-### Management Commands
-
-```bash
-# Container lifecycle
-pct start 200           # Start container
-pct stop 200            # Stop container
-pct restart 200         # Restart container
-
-# Access container
-pct console 200         # Console access
-pct enter 200           # Shell access
-
-# Monitoring
-pct status 200          # Show status
-pct list                # List all containers
-```
-
-### Backup and Snapshots
-
-```bash
-# Create backup
-vzdump 200 --storage local --mode snapshot
-
-# Create snapshot
-pct snapshot 200 before-update
-
-# Rollback snapshot
-pct rollback 200 before-update
-```
-
-## 🔒 Security
-
-### Docker Security Features
-
-- Non-root user execution
-- Read-only filesystem options
-- Security headers in Nginx
-- Container isolation
-- Regular security updates
-
-### Proxmox LXC Security Features
-
-- Unprivileged containers by default
-- AppArmor and seccomp protection
-- cgroups resource isolation
-- Proxmox firewall integration
-- Regular security updates
-
-### Web Application Security
-
-- XSS protection headers
-- Content-Type-Options headers
-- Frame-Options headers
-- Input sanitization
-- Local storage only (no server data)
-
-## 🧪 Development
-
-### Local Development Setup
-
-```bash
-# Clone repository
-git clone https://github.com/miltonsibanda/BookTracker.git
-cd BookTracker
-
-# Start development server
-python3 -m http.server 8080
-
-# Or use live-server for auto-reload
-npm install -g live-server
-live-server --port=8080
-```
-
-### Project Structure
-
-```
-BookTracker/
-├── index.html              # Main application file
-├── script.js               # Application logic and functionality
-├── styles.css              # Styling and responsive design
-├── nginx.conf              # Nginx configuration
-├── Dockerfile              # Docker container definition
-├── docker-compose.yml      # Docker Compose configuration
-├── docker-compose.prod.yml # Production Docker Compose
-├── Makefile               # Build and management commands
-├── build-docker.sh        # Docker build script
-├── proxmox-lxc/           # Proxmox LXC deployment files
-│   ├── setup-booktracker-lxc.sh
-│   ├── deploy-to-lxc.sh
-│   ├── quick-setup.sh
-│   └── README-Proxmox.md
-├── DEPLOYMENT-OPTIONS.md   # Deployment comparison guide
-├── DOCKER-DEPLOYMENT-SUMMARY.md
-└── README.md              # This file
-```
-
-### Testing
-
-The application includes test files for development:
-- `test_rating.html` - Rating system testing
-- `test_book_rating.html` - Book rating integration testing
-
-### Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+### 🚀 Future Features
+- [ ] Mobile app with offline sync
+- [ ] Social features and book sharing
+- [ ] Reading statistics and analytics
+- [ ] Integration with Goodreads, Amazon APIs
+- [ ] Multi-language support
+- [ ] Themes and customization options
 
 ## 📚 Documentation
 
 ### Complete Documentation
 
+- **[README-Data-Persistence.md](README-Data-Persistence.md)** - Detailed persistence guide
 - **[DEPLOYMENT-OPTIONS.md](DEPLOYMENT-OPTIONS.md)** - Comprehensive deployment comparison
-- **[DOCKER-DEPLOYMENT-SUMMARY.md](DOCKER-DEPLOYMENT-SUMMARY.md)** - Docker-specific documentation
 - **[proxmox-lxc/README-Proxmox.md](proxmox-lxc/README-Proxmox.md)** - Proxmox LXC documentation
 - **[SETUP-INSTRUCTIONS.md](SETUP-INSTRUCTIONS.md)** - Detailed setup instructions
 
 ### API Reference
 
-BookTracker uses browser localStorage API:
-- `localStorage.setItem('books', JSON.stringify(books))`
-- `localStorage.getItem('books')`
-- Automatic backup and restore functionality
+BookTracker provides both REST API and localStorage compatibility:
+- `GET /api/books` - Retrieve books collection
+- `POST /api/books` - Save books collection  
+- `GET /api/health` - Server health status
+- Automatic localStorage sync for offline support
 
-## 🤝 Support
+## 🏆 Key Benefits
 
-### Getting Help
+✅ **Cross-Browser Persistence** - Your books, everywhere  
+✅ **Container-Ready** - Docker and Proxmox LXC support  
+✅ **Production-Ready** - Health checks, logging, and monitoring  
+✅ **Developer-Friendly** - Easy setup with comprehensive documentation  
+✅ **Data-Safe** - Multiple backup strategies and fallback systems  
+✅ **Offline-Capable** - Works without internet connection  
+✅ **Scalable** - From personal use to small team deployments  
 
-- 📖 **Documentation**: Check the comprehensive docs in this repository
-- 🐛 **Issues**: Report bugs or request features via GitHub Issues
-- �� **Discussions**: Join discussions on GitHub Discussions
-
-### Troubleshooting
-
-#### Common Issues
-
-1. **Application won't load**
-   - Check browser console for errors
-   - Verify web server is running
-   - Clear browser cache and localStorage
-
-2. **Docker container issues**
-   - Check container logs: `docker logs booktracker-app`
-   - Verify port availability: `netstat -tulpn | grep :8081`
-   - Restart container: `docker restart booktracker-app`
-
-3. **Proxmox LXC issues**
-   - Check container status: `pct status 200`
-   - View container logs: `pct exec 200 -- tail -f /var/log/nginx/error.log`
-   - Restart services: `pct exec 200 -- systemctl restart nginx`
-
-## 📝 License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🎯 Roadmap
+## 🤝 Support
 
-### Planned Features
-
-- [ ] Import/Export functionality for book data
-- [ ] Reading progress tracking
-- [ ] Book series management
-- [ ] Social features (sharing reviews)
-- [ ] Advanced statistics and analytics
-- [ ] Mobile app development
-- [ ] Database backend option
-- [ ] Multi-user support
-- [ ] Cloud synchronization
-
-### Version History
-
-- **v1.0.0** - Initial release with core functionality
-- **v1.1.0** - Added half-star rating system
-- **v1.2.0** - Docker containerization support
-- **v1.3.0** - Proxmox LXC support and comprehensive deployment options
+- **Issues**: [GitHub Issues](https://github.com/miltonsibanda/BookTracker/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/miltonsibanda/BookTracker/discussions)
+- **Documentation**: [Project Wiki](https://github.com/miltonsibanda/BookTracker/wiki)
 
 ## 🙏 Acknowledgments
 
-- Built with vanilla HTML, CSS, and JavaScript for maximum compatibility
-- Nginx for high-performance web serving
-- Docker for consistent deployment environments
-- Proxmox VE for enterprise container management
-- The open-source community for inspiration and best practices
-
-## 📈 Statistics
-
-![GitHub stars](https://img.shields.io/github/stars/miltonsibanda/BookTracker)
-![GitHub forks](https://img.shields.io/github/forks/miltonsibanda/BookTracker)
-![GitHub issues](https://img.shields.io/github/issues/miltonsibanda/BookTracker)
-![GitHub pull requests](https://img.shields.io/github/issues-pr/miltonsibanda/BookTracker)
+- **Google Books API** for book metadata and cover images
+- **Font Awesome** for beautiful icons
+- **Docker Community** for containerization best practices
+- **Open Source Community** for inspiration and feedback
 
 ---
 
-**Happy Reading! 📚✨**
+**BookTracker v2.0** - Now with true data persistence! 📚✨
 
+*Made with ❤️ for book lovers who need their collection accessible everywhere*

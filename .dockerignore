@@ -1,36 +1,66 @@
+# Development files
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
 # Backup files
 *.backup*
-*.backup-*
-*-backup*
+script.js.backup*
+index.html.backup*
+styles.css.backup*
 
-# Test files
+# Test and debug files
 test_*.html
-*-test.html
 minimal-test.html
-
-# Development files
-*.js.backup*
-*.css.backup*
-*.html.backup*
+physical-features-test.html
+import-helper.html
 integration-attempts/
+
+# Git files
+.git
+.gitignore
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Documentation that's not needed in container
+README*.md
+DEPLOYMENT-OPTIONS.md
+DOCKER-DEPLOYMENT-SUMMARY.md
+SETUP-INSTRUCTIONS.md
+
+# Build scripts
+build-docker.sh
+Makefile
+
+# Proxmox files
+proxmox-lxc/
+
+# Environment files
+.env
+.env.*
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Scripts not needed in production
+*.py
+csv-to-json-converter.js
+add_physical_features.js
 fix_rating_system.js
 update_rating_system.js
-add_physical_features.js
+isbndb-integration.js
 
-# CSV and conversion files
-*.csv
-csv_to_json_converter.py
-csv-to-json-converter.js
-imported-books.json
-import-helper.html
-
-# IDE and system files
-.DS_Store
-.vscode/
-.git/
-*.log
-node_modules/
-
-# Temporary files
-*.tmp
-*.temp
+# Original nginx config (now using Node.js)
+nginx.conf
+Dockerfile.nginx-backup
