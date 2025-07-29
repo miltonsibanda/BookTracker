@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Tracker Fix</title>
+</head>
+<body>
+    <h1>Test Tracker Fix</h1>
+    <div id="output">Loading script...</div>
+    
+    <script>
+    // Try to isolate the testBookTracker definition issue
+    console.log('=== SCRIPT LOADING TEST ===');
+    
+    // Load script and monitor what happens
+    const script = document.createElement('script');
+    script.textContent = `
+        console.log('Inside script - start');
+        
+        // Define testBookTracker immediately at the beginning
+        try {
+            window.testBookTrackerFixed = {
+                test: () => {
+                    console.log('Test function called!');
+                    return 'Working!';
+                }
+            };
+            console.log('✅ testBookTrackerFixed defined successfully');
+        } catch (error) {
+            console.error('❌ Failed to define testBookTrackerFixed:', error);
+        }
+        
+        console.log('Inside script - end');
+    `;
+    
+    script.onload = () => {
+        console.log('Script onload fired');
+        checkForGlobal();
+    };
+    
+    document.head.appendChild(script);
+    
+    // Check immediately and after delays
+    setTimeout(checkForGlobal, 100);
+    setTimeout(checkForGlobal, 500);
+    
+    function checkForGlobal() {
+        if (typeof window.testBookTrackerFixed !== 'undefined') {
+            console.log('✅ testBookTrackerFixed found!');
+            document.getElementById('output').innerHTML = '✅ testBookTrackerFixed is working!';
+            
+            try {
+                const result = window.testBookTrackerFixed.test();
+                console.log('Test result:', result);
+            } catch (error) {
+                console.error('Error calling test:', error);
+            }
+        } else {
+            console.log('❌ testBookTrackerFixed not found');
+            document.getElementById('output').innerHTML = '❌ testBookTrackerFixed not found';
+        }
+    }
+    </script>
+</body>
+</html>

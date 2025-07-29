@@ -1040,40 +1040,29 @@ class BookTracker {
 
     // Rating system
     setupRatingInputs() {
-        const stars = document.querySelectorAll('#ratingStars .star');
-        
-        stars.forEach((star, index) => {
-            const starNumber = index + 1;
-            
-            // Add click event for each star
-            star.addEventListener('click', (e) => {
-                const rect = star.getBoundingClientRect();
-                const clickX = e.clientX - rect.left;
-                const starWidth = rect.width;
-                
-                // Determine if clicking left half (half star) or right half (full star)
-                const rating = clickX < starWidth / 2 ? starNumber - 0.5 : starNumber;
-                
+        const stars = document.querySelectorAll('.star[data-rating]');
+        const hiddenInput = document.getElementById('bookRating');
+        const ratingText = document.getElementById('ratingText');
+
+        if (!stars.length || !hiddenInput) return;
+
+        stars.forEach(star => {
+            star.addEventListener('click', () => {
+                const rating = parseInt(star.dataset.rating);
                 this.setRating(rating);
             });
-            
-            // Add hover effect for visual feedback
-            star.addEventListener('mousemove', (e) => {
-                const rect = star.getBoundingClientRect();
-                const hoverX = e.clientX - rect.left;
-                const starWidth = rect.width;
-                
-                // Show preview of what would be selected
-                const rating = hoverX < starWidth / 2 ? starNumber - 0.5 : starNumber;
+
+            star.addEventListener('mouseenter', () => {
+                const rating = parseInt(star.dataset.rating);
                 this.highlightStars(rating);
             });
         });
 
-        // Reset to current rating when mouse leaves the rating area
-        const container = document.querySelector('#ratingStars');
+        // Reset highlighting on mouse leave
+        const container = document.querySelector('.half-stars');
         if (container) {
             container.addEventListener('mouseleave', () => {
-                const currentRating = parseFloat(document.getElementById('bookRating').value) || 0;
+                const currentRating = parseInt(hiddenInput.value) || 0;
                 this.highlightStars(currentRating);
             });
         }
@@ -1095,18 +1084,10 @@ class BookTracker {
     }
 
     highlightStars(rating) {
-        const stars = document.querySelectorAll('#ratingStars .star');
-        stars.forEach((star, index) => {
-            const starNumber = index + 1;
-            star.classList.remove('active', 'half');
-            
-            if (starNumber <= Math.floor(rating)) {
-                // Full star
-                star.classList.add('active');
-            } else if (starNumber === Math.floor(rating) + 1 && rating % 1 !== 0) {
-                // Half star
-                star.classList.add('half');
-            }
+        const stars = document.querySelectorAll('.star[data-rating]');
+        stars.forEach(star => {
+            const starRating = parseInt(star.dataset.rating);
+            star.classList.toggle('active', starRating <= rating);
         });
     }
 
@@ -1156,11 +1137,7 @@ class BookTracker {
 
     renderGridView(container) {
         container.className = 'books-grid';
-        container.innerHTML = this.filteredBooks.map(book => {
-            const physicalFeatures = this.getPhysicalFeatures(book);
-            const specialEdition = this.isSpecialEdition(book);
-            
-            return `
+        container.innerHTML = this.filteredBooks.map(book => `
             <div class="book-card" data-id="${book.id}">
                 <div class="book-card__header">
                     <div class="book-card__cover">
@@ -1180,7 +1157,7 @@ class BookTracker {
                     </div>
                 </div>
                 <div class="book-card__content">
-                    <h3 class="book-card__title ${specialEdition ? 'book-card__special-edition' : ''}">${this.escapeHtml(book.title)}</h3>
+                    <h3 class="book-card__title">${this.escapeHtml(book.title)}</h3>
                     <p class="book-card__author">by ${this.escapeHtml(book.author)}</p>
                     ${book.series ? `<p class="book-card__series">${this.escapeHtml(book.series)}${book.bookNumber ? ` #${book.bookNumber}` : ''}</p>` : ''}
                     <div class="book-card__rating">
@@ -1190,30 +1167,14 @@ class BookTracker {
                         ${this.getStatusLabel(book.status)}
                     </div>
                     ${book.mythicalElement ? `<div class="book-card__genre">${this.escapeHtml(book.mythicalElement)}</div>` : ''}
-                    ${book.gifted ? `<div class="book-card__gifted"><i class="fas fa-gift"></i> Gift</div>` : ''}
-                    ${physicalFeatures.length > 0 ? `
-                        <div class="book-card__physical-features">
-                            ${physicalFeatures.map(feature => `
-                                <span class="book-card__feature ${feature.special ? 'book-card__feature--special' : ''}">
-                                    <i class="${feature.icon}"></i>
-                                    ${feature.name}
-                                </span>
-                            `).join('')}
-                        </div>
-                    ` : ''}
                 </div>
             </div>
-        `;
-        }).join('');
+        `).join('');
     }
 
     renderListView(container) {
         container.className = 'book-list';
-        container.innerHTML = this.filteredBooks.map(book => {
-            const physicalFeatures = this.getPhysicalFeatures(book);
-            const specialEdition = this.isSpecialEdition(book);
-            
-            return `
+        container.innerHTML = this.filteredBooks.map(book => `
             <div class="book-list__item" data-id="${book.id}">
                 <div class="book-list__cover">
                     ${book.coverImage ? 
@@ -1224,7 +1185,7 @@ class BookTracker {
                 </div>
                 <div class="book-list__content">
                     <div class="book-list__main">
-                        <h3 class="book-list__title ${specialEdition ? 'book-card__special-edition' : ''}">${this.escapeHtml(book.title)}</h3>
+                        <h3 class="book-list__title">${this.escapeHtml(book.title)}</h3>
                         <p class="book-list__author">by ${this.escapeHtml(book.author)}</p>
                         ${book.series ? `<p class="book-list__series">${this.escapeHtml(book.series)}${book.bookNumber ? ` #${book.bookNumber}` : ''}</p>` : ''}
                         <div class="book-list__rating">
@@ -1237,17 +1198,6 @@ class BookTracker {
                         </div>
                         ${book.mythicalElement ? `<div class="book-list__genre">${this.escapeHtml(book.mythicalElement)}</div>` : ''}
                         ${book.pageCount ? `<div class="book-list__pages">${book.pageCount} pages</div>` : ''}
-                        ${book.gifted ? `<div class="book-list__gifted"><i class="fas fa-gift"></i> Gift</div>` : ''}
-                        ${physicalFeatures.length > 0 ? `
-                            <div class="book-list__physical-features">
-                                ${physicalFeatures.map(feature => `
-                                    <span class="book-card__feature ${feature.special ? 'book-card__feature--special' : ''}">
-                                        <i class="${feature.icon}"></i>
-                                        ${feature.name}
-                                    </span>
-                                `).join('')}
-                            </div>
-                        ` : ''}
                     </div>
                     <div class="book-list__actions">
                         <button class="btn btn--small btn--primary" onclick="bookTracker.openModal(bookTracker.books.find(b => b.id === '${book.id}'))">
@@ -1259,58 +1209,22 @@ class BookTracker {
                     </div>
                 </div>
             </div>
-        `;
-        }).join('');
+        `).join('');
     }
 
     renderStarRating(rating) {
-        if (!rating || rating === 0) {
-            return '<span class="no-rating">No rating</span>';
-        }
-        
         let stars = '';
-        const fullStars = Math.floor(rating);
-        const hasHalfStar = rating % 1 !== 0;
-        
-        // Add full stars
-        for (let i = 1; i <= fullStars; i++) {
-            stars += '<i class="fas fa-star star-filled"></i>';
+        for (let i = 1; i <= 5; i++) {
+            if (i <= rating) {
+                stars += '<i class="fas fa-star star-filled"></i>';
+            } else {
+                stars += '<i class="far fa-star star-empty"></i>';
+            }
         }
-        
-        // Add half star if needed
-        if (hasHalfStar) {
-            stars += '<i class="fas fa-star-half-alt star-half"></i>';
-        }
-        
-        // Add empty stars to complete 5 stars
-        const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
-        for (let i = 1; i <= emptyStars; i++) {
-            stars += '<i class="far fa-star star-empty"></i>';
-        }
-        
-        return `<span class="star-rating" title="${rating} stars">${stars}</span>`;
+        return stars;
     }
 
-
-    
-    // Helper methods for physical features
-    getPhysicalFeatures(book) {
-        const features = [];
-        
-        if (book.digitallySigned) features.push({ name: 'Digitally Signed', icon: 'fas fa-signature', special: true });
-        if (book.signed) features.push({ name: 'Signed', icon: 'fas fa-pen-fancy', special: true });
-        if (book.sprayedEdges) features.push({ name: 'Sprayed Edges', icon: 'fas fa-paint-brush', special: false });
-        if (book.hiddenCover) features.push({ name: 'Hidden Cover', icon: 'fas fa-eye-slash', special: false });
-        if (book.reversibleDustJacket) features.push({ name: 'Reversible Dust Jacket', icon: 'fas fa-sync-alt', special: false });
-        
-        return features;
-    }
-
-    isSpecialEdition(book) {
-        return book.digitallySigned || book.signed || book.sprayedEdges || book.hiddenCover || book.reversibleDustJacket;
-    }
-
-        getStatusLabel(status) {
+    getStatusLabel(status) {
         const labels = {
             'want-to-read': 'Want to Read',
             'currently-reading': 'Currently Reading', 

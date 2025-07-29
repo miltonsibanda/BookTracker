@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Methods - BookTracker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Debug Methods Test</h1>
+        <div id="results"></div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const results = document.getElementById('results');
+            
+            function addResult(test, status, message) {
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <div style="padding: 10px; margin: 5px; border-left: 4px solid ${status === 'success' ? 'green' : 'red'};">
+                        <strong>${test}:</strong> ${message}
+                    </div>
+                `;
+                results.appendChild(div);
+            }
+
+            if (window.bookTracker) {
+                addResult('BookTracker Instance', 'success', 'BookTracker is available');
+                
+                // Check if methods exist
+                if (typeof window.bookTracker.getPhysicalFeatures === 'function') {
+                    addResult('getPhysicalFeatures Method', 'success', 'Method exists and is a function');
+                    
+                    // Test the method
+                    try {
+                        const testBook = {
+                            digitallySigned: true,
+                            sprayedEdges: true,
+                            gifted: true
+                        };
+                        const result = window.bookTracker.getPhysicalFeatures(testBook);
+                        addResult('getPhysicalFeatures Test', 'success', `Returned ${result.length} features: ${result.map(f => f.name).join(', ')}`);
+                    } catch (error) {
+                        addResult('getPhysicalFeatures Test', 'error', `Error calling method: ${error.message}`);
+                    }
+                } else {
+                    addResult('getPhysicalFeatures Method', 'error', `Method type: ${typeof window.bookTracker.getPhysicalFeatures}`);
+                }
+                
+                if (typeof window.bookTracker.isSpecialEdition === 'function') {
+                    addResult('isSpecialEdition Method', 'success', 'Method exists and is a function');
+                    
+                    // Test the method
+                    try {
+                        const testBook = {
+                            digitallySigned: true,
+                            sprayedEdges: true
+                        };
+                        const result = window.bookTracker.isSpecialEdition(testBook);
+                        addResult('isSpecialEdition Test', 'success', `Returned: ${result}`);
+                    } catch (error) {
+                        addResult('isSpecialEdition Test', 'error', `Error calling method: ${error.message}`);
+                    }
+                } else {
+                    addResult('isSpecialEdition Method', 'error', `Method type: ${typeof window.bookTracker.isSpecialEdition}`);
+                }
+                
+                // List all available methods
+                const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(window.bookTracker))
+                    .filter(name => typeof window.bookTracker[name] === 'function' && name !== 'constructor');
+                addResult('Available Methods', 'success', methods.join(', '));
+                
+            } else {
+                addResult('BookTracker Instance', 'error', 'BookTracker not available');
+            }
+        });
+    </script>
+</body>
+</html>

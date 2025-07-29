@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Test Updated</title>
+</head>
+<body>
+    <h1>Simple JavaScript Loading Test - Updated</h1>
+    <div id="output"></div>
+    
+    <script>
+        console.log('🚀 Starting simple test...');
+        
+        // Test 1: Basic JavaScript execution
+        console.log('✅ JavaScript is working');
+        
+        // Test 2: Try to load the main script
+        const script = document.createElement('script');
+        script.src = '/script.js';
+        script.onload = () => {
+            console.log('✅ Script loaded successfully');
+            
+            // Test if testBookTrackerSimple is available
+            setTimeout(() => {
+                if (typeof window.testBookTrackerSimple !== 'undefined') {
+                    console.log('✅ testBookTrackerSimple is available!');
+                    console.log('Methods:', Object.keys(window.testBookTrackerSimple));
+                    document.getElementById('output').innerHTML = '✅ testBookTrackerSimple is working!';
+                    
+                    // Test the simple function
+                    try {
+                        window.testBookTrackerSimple.test();
+                        console.log('✅ Test function works!');
+                    } catch (error) {
+                        console.error('❌ Test function failed:', error);
+                    }
+                } else if (typeof window.testBookTracker !== 'undefined') {
+                    console.log('✅ Original testBookTracker is available!');
+                    console.log('Methods:', Object.keys(window.testBookTracker));
+                    document.getElementById('output').innerHTML = '✅ Original testBookTracker is working!';
+                } else {
+                    console.error('❌ Neither testBookTracker variants are available');
+                    console.log('Available globals:', Object.keys(window).filter(k => k.includes('test') || k.includes('Book')));
+                    document.getElementById('output').innerHTML = '❌ No testBookTracker variants working';
+                }
+            }, 2000);
+        };
+        
+        script.onerror = (error) => {
+            console.error('❌ Script failed to load:', error);
+            document.getElementById('output').innerHTML = '❌ Script failed to load';
+        };
+        
+        document.head.appendChild(script);
+    </script>
+</body>
+</html>

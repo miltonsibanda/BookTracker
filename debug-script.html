@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Script Debug Test</title>
+</head>
+<body>
+    <h1>Script Debug Test</h1>
+    <div id="output">Loading...</div>
+    
+    <script>
+    console.log('=== SCRIPT DEBUG START ===');
+    console.log('Document ready state:', document.readyState);
+    
+    // Track script loading
+    let scriptLoaded = false;
+    let initCalled = false;
+    let testBookTrackerDefined = false;
+    
+    // Create the script element
+    const script = document.createElement('script');
+    script.src = './script.js';
+    
+    // Monitor for script loading
+    script.onload = () => {
+        console.log('✅ Script loaded successfully');
+        scriptLoaded = true;
+        
+        // Check immediately
+        checkGlobals('onload');
+        
+        // Check after various delays
+        setTimeout(() => checkGlobals('500ms'), 500);
+        setTimeout(() => checkGlobals('1000ms'), 1000);
+        setTimeout(() => checkGlobals('2000ms'), 2000);
+        setTimeout(() => checkGlobals('5000ms'), 5000);
+    };
+    
+    script.onerror = (error) => {
+        console.error('❌ Script failed to load:', error);
+        document.getElementById('output').innerHTML = '❌ Script failed to load: ' + error;
+    };
+    
+    function checkGlobals(timing) {
+        console.log(`\n=== CHECKING GLOBALS AT ${timing} ===`);
+        console.log('BookTracker class:', typeof BookTracker);
+        console.log('window.bookTracker:', typeof window.bookTracker);
+        console.log('window.testBookTracker:', typeof window.testBookTracker);
+        console.log('BookTrackerAPI class:', typeof BookTrackerAPI);
+        
+        // List all window properties containing 'book' or 'test'
+        const relevantKeys = Object.keys(window).filter(k => 
+            k.toLowerCase().includes('book') || 
+            k.toLowerCase().includes('test') ||
+            k.toLowerCase().includes('tracker')
+        );
+        console.log('Relevant window keys:', relevantKeys);
+        
+        if (typeof window.testBookTracker !== 'undefined') {
+            console.log('✅ testBookTracker found!');
+            console.log('testBookTracker methods:', Object.keys(window.testBookTracker));
+            testBookTrackerDefined = true;
+            
+            document.getElementById('output').innerHTML = '✅ testBookTracker is working at ' + timing;
+        } else {
+            console.log('❌ testBookTracker not found at', timing);
+            
+            if (timing === '5000ms' && !testBookTrackerDefined) {
+                document.getElementById('output').innerHTML = '❌ testBookTracker never became available';
+            }
+        }
+    }
+    
+    // Append script
+    document.head.appendChild(script);
+    
+    // Also check on DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('DOMContentLoaded fired');
+        setTimeout(() => checkGlobals('DOMContentLoaded+100ms'), 100);
+    });
+    
+    // And on window load
+    window.addEventListener('load', () => {
+        console.log('Window load fired');
+        setTimeout(() => checkGlobals('WindowLoad+100ms'), 100);
+    });
+    </script>
+</body>
+</html>

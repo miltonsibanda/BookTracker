@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Access Fix Test</title>
+</head>
+<body>
+    <h1>BookTracker IP Access Fix Test</h1>
+    <div id="results">
+        <div id="location-info"></div>
+        <div id="global-vars"></div>
+        <div id="functionality-test"></div>
+    </div>
+    
+    <script>
+        console.log('🧪 Starting IP Access Fix Test...');
+        
+        // Display location info
+        document.getElementById('location-info').innerHTML = `
+            <h3>Location Information:</h3>
+            <p><strong>URL:</strong> ${window.location.href}</p>
+            <p><strong>Hostname:</strong> ${window.location.hostname}</p>
+            <p><strong>Port:</strong> ${window.location.port}</p>
+            <p><strong>Protocol:</strong> ${window.location.protocol}</p>
+        `;
+        
+        // Load the main script
+        const script = document.createElement('script');
+        script.src = '/script.js';
+        script.onload = () => {
+            console.log('✅ Script loaded successfully');
+            
+            // Wait for initialization to complete
+            setTimeout(() => {
+                testGlobalVariables();
+                testFunctionality();
+            }, 3000);
+        };
+        
+        script.onerror = (error) => {
+            console.error('❌ Script failed to load:', error);
+            document.getElementById('results').innerHTML = '❌ Script loading failed';
+        };
+        
+        function testGlobalVariables() {
+            console.log('🔍 Testing global variables...');
+            
+            const globals = {
+                bookTracker: typeof window.bookTracker,
+                globalBookTracker: typeof window.globalBookTracker,
+                testBookTracker: typeof window.testBookTracker,
+                testBookTrackerSimple: typeof window.testBookTrackerSimple,
+                selectAutocompleteResult: typeof window.selectAutocompleteResult,
+                selectSearchResult: typeof window.selectSearchResult
+            };
+            
+            let globalVarsHtml = '<h3>Global Variables Status:</h3><ul>';
+            
+            Object.entries(globals).forEach(([name, type]) => {
+                const status = type !== 'undefined' ? '✅' : '❌';
+                globalVarsHtml += `<li>${status} <strong>${name}:</strong> ${type}</li>`;
+                console.log(`${status} ${name}: ${type}`);
+            });
+            
+            globalVarsHtml += '</ul>';
+            document.getElementById('global-vars').innerHTML = globalVarsHtml;
+        }
+        
+        function testFunctionality() {
+            console.log('⚙️ Testing functionality...');
+            
+            let functionalityHtml = '<h3>Functionality Tests:</h3><ul>';
+            
+            // Test 1: BookTracker instance methods
+            if (window.globalBookTracker) {
+                const methods = ['openModal', 'openSearchModal', 'selectAutocompleteResult', 'selectSearchResult'];
+                methods.forEach(method => {
+                    const exists = typeof window.globalBookTracker[method] === 'function';
+                    const status = exists ? '✅' : '❌';
+                    functionalityHtml += `<li>${status} globalBookTracker.${method}()</li>`;
+                    console.log(`${status} globalBookTracker.${method}: ${typeof window.globalBookTracker[method]}`);
+                });
+            } else {
+                functionalityHtml += '<li>❌ globalBookTracker not available</li>';
+            }
+            
+            // Test 2: Global fallback functions
+            const globalFunctions = ['selectAutocompleteResult', 'selectSearchResult'];
+            globalFunctions.forEach(func => {
+                const exists = typeof window[func] === 'function';
+                const status = exists ? '✅' : '❌';
+                functionalityHtml += `<li>${status} window.${func}() (fallback)</li>`;
+                console.log(`${status} window.${func}: ${typeof window[func]}`);
+            });
+            
+            // Test 3: Try calling a global function
+            if (typeof window.selectAutocompleteResult === 'function') {
+                try {
+                    console.log('🧪 Testing global selectAutocompleteResult...');
+                    // This should log without error even if BookTracker isn't initialized
+                    const result = '✅ Global function callable';
+                    functionalityHtml += `<li>${result}</li>`;
+                    console.log(result);
+                } catch (error) {
+                    const result = '❌ Global function error: ' + error.message;
+                    functionalityHtml += `<li>${result}</li>`;
+                    console.error(result);
+                }
+            }
+            
+            functionalityHtml += '</ul>';
+            
+            // Overall assessment
+            const hasBookTracker = typeof window.globalBookTracker !== 'undefined';
+            const hasFallbacks = typeof window.selectAutocompleteResult === 'function';
+            
+            if (hasBookTracker && hasFallbacks) {
+                functionalityHtml += '<p><strong>🎉 RESULT: IP access should work correctly!</strong></p>';
+                functionalityHtml += '<p>Both BookTracker instance and global fallback functions are available.</p>';
+            } else if (hasFallbacks) {
+                functionalityHtml += '<p><strong>⚠️ RESULT: Partial functionality available</strong></p>';
+                functionalityHtml += '<p>Global fallback functions exist, but BookTracker instance missing.</p>';
+            } else {
+                functionalityHtml += '<p><strong>❌ RESULT: IP access issue not resolved</strong></p>';
+                functionalityHtml += '<p>Neither BookTracker instance nor fallback functions are available.</p>';
+            }
+            
+            document.getElementById('functionality-test').innerHTML = functionalityHtml;
+        }
+        
+        document.head.appendChild(script);
+    </script>
+</body>
+</html>

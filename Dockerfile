@@ -11,6 +11,11 @@ RUN rm -rf ./*
 COPY index.html .
 COPY script.js .
 COPY styles.css .
+COPY debug.html .
+COPY test-modals.html .
+COPY test-simple.html .
+COPY test-final-fixes.html .
+COPY debug-methods.html .
 
 # Copy the nginx configuration file
 COPY nginx.conf /etc/nginx/nginx.conf

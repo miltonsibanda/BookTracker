@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BookTracker Functionality Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .test-result { margin: 5px 0; padding: 5px; border-radius: 3px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button { margin: 5px; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>BookTracker Functionality Test</h1>
+    <div id="test-results"></div>
+    
+    <div class="test-section">
+        <h3>Manual Tests</h3>
+        <button onclick="testRatingSystem()">Test Rating System</button>
+        <button onclick="testPhysicalFeatures()">Test Physical Features</button>
+        <button onclick="testAutocomplete()">Test Autocomplete</button>
+        <button onclick="testIPCompatibility()">Test IP Compatibility</button>
+    </div>
+    
+    <script>
+        console.log('🧪 Loading BookTracker functionality test...');
+        
+        let testResults = [];
+        
+        function addTestResult(test, status, message) {
+            const result = { test, status, message };
+            testResults.push(result);
+            updateDisplay();
+        }
+        
+        function updateDisplay() {
+            const container = document.getElementById('test-results');
+            container.innerHTML = testResults.map(result => 
+                `<div class="test-result ${result.status}">
+                    ${result.status === 'success' ? '✅' : result.status === 'error' ? '❌' : 'ℹ️'} 
+                    <strong>${result.test}:</strong> ${result.message}
+                </div>`
+            ).join('');
+        }
+        
+        // Load the main script
+        const script = document.createElement('script');
+        script.src = '/script.js';
+        script.onload = () => {
+            addTestResult('Script Loading', 'success', 'Script loaded successfully');
+            
+            // Wait for initialization
+            setTimeout(() => {
+                runAutomaticTests();
+            }, 3000);
+        };
+        
+        script.onerror = (error) => {
+            addTestResult('Script Loading', 'error', 'Failed to load script: ' + error);
+        };
+        
+        function runAutomaticTests() {
+            // Test 1: BookTracker instance
+            if (typeof window.bookTracker !== 'undefined') {
+                addTestResult('BookTracker Instance', 'success', 'BookTracker instance available');
+            } else {
+                addTestResult('BookTracker Instance', 'error', 'BookTracker instance not found');
+            }
+            
+            // Test 2: Rating system functions
+            if (window.bookTracker && typeof window.bookTracker.setupRatingInputs === 'function') {
+                addTestResult('Rating System', 'success', 'setupRatingInputs function exists');
+            } else {
+                addTestResult('Rating System', 'error', 'Rating system functions missing');
+            }
+            
+            // Test 3: Physical features in initial data
+            if (window.bookTracker && window.bookTracker.books && window.bookTracker.books.length > 0) {
+                const book = window.bookTracker.books[0];
+                if (typeof book.digitallySigned !== 'undefined' && typeof book.sprayedEdges !== 'undefined') {
+                    addTestResult('Physical Features', 'success', 'Physical features properties exist in book data');
+                } else {
+                    addTestResult('Physical Features', 'error', 'Physical features missing from book data');
+                }
+            } else {
+                addTestResult('Physical Features', 'info', 'No books to test physical features');
+            }
+            
+            // Test 4: IP Compatibility functions
+            if (typeof window.selectAutocompleteResult === 'function') {
+                addTestResult('IP Compatibility', 'success', 'Global selectAutocompleteResult function exists');
+            } else {
+                addTestResult('IP Compatibility', 'error', 'Global compatibility function missing');
+            }
+            
+            // Test 5: Test tracker functions
+            if (typeof window.testBookTracker !== 'undefined') {
+                addTestResult('Test Functions', 'success', 'testBookTracker debugging object available');
+            } else if (typeof window.testBookTrackerSimple !== 'undefined') {
+                addTestResult('Test Functions', 'success', 'testBookTrackerSimple debugging object available');
+            } else {
+                addTestResult('Test Functions', 'error', 'No test debugging objects found');
+            }
+        }
+        
+        // Manual test functions
+        function testRatingSystem() {
+            if (window.bookTracker) {
+                try {
+                    // Test if rating functions exist
+                    const rating = window.bookTracker.getCurrentRating ? window.bookTracker.getCurrentRating() : 'function missing';
+                    addTestResult('Rating System Manual', 'success', `getCurrentRating result: ${rating}`);
+                } catch (error) {
+                    addTestResult('Rating System Manual', 'error', `Error: ${error.message}`);
+                }
+            } else {
+                addTestResult('Rating System Manual', 'error', 'BookTracker not available');
+            }
+        }
+        
+        function testPhysicalFeatures() {
+            if (window.bookTracker && window.bookTracker.books.length > 0) {
+                const book = window.bookTracker.books[0];
+                const features = ['digitallySigned', 'sprayedEdges', 'hiddenCover', 'reversibleDustJacket'];
+                const existing = features.filter(f => typeof book[f] !== 'undefined');
+                
+                if (existing.length === features.length) {
+                    addTestResult('Physical Features Manual', 'success', `All physical features present: ${existing.join(', ')}`);
+                } else {
+                    addTestResult('Physical Features Manual', 'error', `Missing features: ${features.filter(f => !existing.includes(f)).join(', ')}`);
+                }
+            } else {
+                addTestResult('Physical Features Manual', 'error', 'No books available to test');
+            }
+        }
+        
+        function testAutocomplete() {
+            if (window.bookTracker && typeof window.bookTracker.selectAutocompleteResult === 'function') {
+                try {
+                    // Test that the function exists and can be called (even with dummy data)
+                    addTestResult('Autocomplete Manual', 'success', 'selectAutocompleteResult function exists and is callable');
+                } catch (error) {
+                    addTestResult('Autocomplete Manual', 'error', `Error: ${error.message}`);
+                }
+            } else {
+                addTestResult('Autocomplete Manual', 'error', 'Autocomplete function not available');
+            }
+        }
+        
+        function testIPCompatibility() {
+            // Test both the global function and that it connects to BookTracker
+            if (typeof window.selectAutocompleteResult === 'function') {
+                try {
+                    // This should log without throwing an error
+                    console.log('Testing IP compatibility function...');
+                    addTestResult('IP Compatibility Manual', 'success', 'Global functions available for IP access');
+                } catch (error) {
+                    addTestResult('IP Compatibility Manual', 'error', `Error: ${error.message}`);
+                }
+            } else {
+                addTestResult('IP Compatibility Manual', 'error', 'IP compatibility functions missing');
+            }
+        }
+        
+        document.head.appendChild(script);
+    </script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal Test</title>
+</head>
+<body>
+    <h1>Minimal Test</h1>
+    <div id="output">Testing...</div>
+    
+    <script>
+    console.log('Testing minimal script setup...');
+    
+    // Just define testBookTracker directly
+    try {
+        window.testBookTracker = {
+            test: () => {
+                console.log('Test function works!');
+                return 'success';
+            }
+        };
+        console.log('✅ testBookTracker defined successfully');
+        document.getElementById('output').innerHTML = '✅ testBookTracker works';
+    } catch (error) {
+        console.error('❌ Error defining testBookTracker:', error);
+        document.getElementById('output').innerHTML = '❌ Error: ' + error.message;
+    }
+    
+    // Check after a delay
+    setTimeout(() => {
+        if (typeof window.testBookTracker !== 'undefined') {
+            console.log('✅ testBookTracker is accessible');
+            console.log('testBookTracker.test():', window.testBookTracker.test());
+        } else {
+            console.error('❌ testBookTracker is not accessible');
+        }
+    }, 100);
+    </script>
+</body>
+</html>
