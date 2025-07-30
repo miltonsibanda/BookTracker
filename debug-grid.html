@@ -41,6 +41,7 @@
             <div class="test-controls">
                 <button class="btn btn--primary" onclick="testGridLayout()">Test Grid Layout</button>
                 <button class="btn btn--secondary" onclick="addTestBooks()">Add Test Books</button>
+                <button class="btn btn--secondary" onclick="clearBooks()">Clear All Books</button>
                 <button class="btn btn--secondary" onclick="toggleToGrid()">Force Grid View</button>
                 <button class="btn btn--secondary" onclick="toggleToList()">Force List View</button>
                 <button class="btn btn--secondary" onclick="inspectContainer()">Inspect Container</button>
@@ -174,8 +175,11 @@
                             </div>
                         </div>
                         <div class="book-card__actions">
-                            <button class="btn btn--small btn--primary">
+                            <button class="btn btn--small btn--primary" onclick="editBook('${book.id}')">
                                 <i class="fas fa-edit"></i> Edit
+                            </button>
+                            <button class="btn btn--small btn--danger" onclick="deleteBook('${book.id}')">
+                                <i class="fas fa-trash"></i> Delete
                             </button>
                         </div>
                     </div>
@@ -265,6 +269,57 @@
                 log(`📚 First card width: ${firstCard.offsetWidth}px`, 'info');
                 log(`📚 First card height: ${firstCard.offsetHeight}px`, 'info');
             }
+        }
+
+        function clearBooks() {
+            const container = document.getElementById('booksContainer');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (container) {
+                container.innerHTML = '';
+                container.style.display = 'none';
+            }
+            
+            if (emptyState) {
+                emptyState.style.display = 'block';
+            }
+            
+            testBooks = [];
+            log('🗑️ All test books cleared', 'success');
+        }
+
+        function deleteBook(bookId) {
+            console.log('Deleting book with ID:', bookId);
+            
+            // Remove from testBooks array
+            const bookIndex = testBooks.findIndex(book => book.id === bookId);
+            if (bookIndex !== -1) {
+                testBooks.splice(bookIndex, 1);
+            }
+            
+            // Remove from DOM
+            const bookElement = document.querySelector(`[data-id="${bookId}"]`);
+            if (bookElement) {
+                bookElement.remove();
+                log(`🗑️ Deleted book: ${bookId}`, 'success');
+                
+                // Check if container is empty and show empty state
+                const container = document.getElementById('booksContainer');
+                const emptyState = document.getElementById('emptyState');
+                
+                if (testBooks.length === 0) {
+                    if (container) container.style.display = 'none';
+                    if (emptyState) emptyState.style.display = 'block';
+                    log('📭 No books remaining - showing empty state', 'info');
+                }
+            } else {
+                log(`❌ Book not found: ${bookId}`, 'error');
+            }
+        }
+
+        function editBook(bookId) {
+            log(`✏️ Edit requested for book: ${bookId}`, 'info');
+            alert('Edit functionality is not implemented in this diagnostic tool');
         }
 
         // Auto-run diagnostic on load
