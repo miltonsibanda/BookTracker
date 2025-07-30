@@ -254,9 +254,9 @@ class BookTracker {
         // Search and filters
         checkAndBind('searchInput', 'input', () => this.handleSearch());
         checkAndBind('clearSearch', 'click', () => this.clearSearch());
-        checkAndBind('statusFilter', 'change', () => this.applyFilters());
-        checkAndBind('genreFilter', 'change', () => this.applyFilters());
-        checkAndBind('sortBy', 'change', () => this.applySorting());
+        checkAndBind('statusFilter', 'change', () => this.renderBooks());
+        checkAndBind('genreFilter', 'change', () => this.renderBooks());
+        checkAndBind('sortBy', 'change', () => this.renderBooks());
 
         // View toggle
         checkAndBind('gridView', 'click', () => this.toggleView('grid'));
@@ -1081,7 +1081,7 @@ class BookTracker {
 
     getCurrentRating() {
         const hiddenInput = document.getElementById('bookRating');
-        return hiddenInput ? parseInt(hiddenInput.value) || 0 : 0;
+        return hiddenInput ? parseFloat(hiddenInput.value) || 0 : 0;
     }
 
     setRating(rating) {
@@ -1155,7 +1155,7 @@ class BookTracker {
     }
 
     renderGridView(container) {
-        container.className = 'books-grid';
+        container.className = 'books-container';
         container.innerHTML = this.filteredBooks.map(book => {
             const physicalFeatures = this.getPhysicalFeatures(book);
             const specialEdition = this.isSpecialEdition(book);
@@ -1208,48 +1208,22 @@ class BookTracker {
     }
 
     renderListView(container) {
-        container.className = 'book-list';
+        container.className = 'books-container list-view';
         container.innerHTML = this.filteredBooks.map(book => {
             const physicalFeatures = this.getPhysicalFeatures(book);
             const specialEdition = this.isSpecialEdition(book);
             
             return `
-            <div class="book-list__item" data-id="${book.id}">
-                <div class="book-list__cover">
-                    ${book.coverImage ? 
-                        `<img src="${book.coverImage}" alt="${this.escapeHtml(book.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='block';">
-                         <div class="book-list__no-cover" style="display: none;"><i class="fas fa-book"></i></div>` :
-                        `<div class="book-list__no-cover"><i class="fas fa-book"></i></div>`
-                    }
-                </div>
-                <div class="book-list__content">
-                    <div class="book-list__main">
-                        <h3 class="book-list__title ${specialEdition ? 'book-card__special-edition' : ''}">${this.escapeHtml(book.title)}</h3>
-                        <p class="book-list__author">by ${this.escapeHtml(book.author)}</p>
-                        ${book.series ? `<p class="book-list__series">${this.escapeHtml(book.series)}${book.bookNumber ? ` #${book.bookNumber}` : ''}</p>` : ''}
-                        <div class="book-list__rating">
-                            ${this.renderStarRating(book.rating)}
-                        </div>
+            <div class="book-card" data-id="${book.id}">
+                <div class="book-card__header">
+                    <div class="book-card__cover">
+                        ${book.coverImage ? 
+                            `<img src="${book.coverImage}" alt="${this.escapeHtml(book.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                             <div class="book-card__no-cover" style="display: none;"><i class="fas fa-book"></i></div>` :
+                            `<div class="book-card__no-cover"><i class="fas fa-book"></i></div>`
+                        }
                     </div>
-                    <div class="book-list__meta">
-                        <div class="book-list__status status--${book.status}">
-                            ${this.getStatusLabel(book.status)}
-                        </div>
-                        ${book.mythicalElement ? `<div class="book-list__genre">${this.escapeHtml(book.mythicalElement)}</div>` : ''}
-                        ${book.pageCount ? `<div class="book-list__pages">${book.pageCount} pages</div>` : ''}
-                        ${book.gifted ? `<div class="book-list__gifted"><i class="fas fa-gift"></i> Gift</div>` : ''}
-                        ${physicalFeatures.length > 0 ? `
-                            <div class="book-list__physical-features">
-                                ${physicalFeatures.map(feature => `
-                                    <span class="book-card__feature ${feature.special ? 'book-card__feature--special' : ''}">
-                                        <i class="${feature.icon}"></i>
-                                        ${feature.name}
-                                    </span>
-                                `).join('')}
-                            </div>
-                        ` : ''}
-                    </div>
-                    <div class="book-list__actions">
+                    <div class="book-card__actions">
                         <button class="btn btn--small btn--primary" onclick="bookTracker.openModal(bookTracker.books.find(b => b.id === '${book.id}'))">
                             <i class="fas fa-edit"></i> Edit
                         </button>
@@ -1257,6 +1231,30 @@ class BookTracker {
                             <i class="fas fa-trash"></i> Delete
                         </button>
                     </div>
+                </div>
+                <div class="book-card__content">
+                    <h3 class="book-card__title ${specialEdition ? 'book-card__special-edition' : ''}">${this.escapeHtml(book.title)}</h3>
+                    <p class="book-card__author">by ${this.escapeHtml(book.author)}</p>
+                    ${book.series ? `<p class="book-card__series">${this.escapeHtml(book.series)}${book.bookNumber ? ` #${book.bookNumber}` : ''}</p>` : ''}
+                    <div class="book-card__rating">
+                        ${this.renderStarRating(book.rating)}
+                    </div>
+                    <div class="book-card__status status--${book.status}">
+                        ${this.getStatusLabel(book.status)}
+                    </div>
+                    ${book.mythicalElement ? `<div class="book-card__genre">${this.escapeHtml(book.mythicalElement)}</div>` : ''}
+                    ${book.pageCount ? `<div class="book-card__pages">${book.pageCount} pages</div>` : ''}
+                    ${book.gifted ? `<div class="book-card__gifted"><i class="fas fa-gift"></i> Gift</div>` : ''}
+                    ${physicalFeatures.length > 0 ? `
+                        <div class="book-card__physical-features">
+                            ${physicalFeatures.map(feature => `
+                                <span class="book-card__feature ${feature.special ? 'book-card__feature--special' : ''}">
+                                    <i class="${feature.icon}"></i>
+                                    ${feature.name}
+                                </span>
+                            `).join('')}
+                        </div>
+                    ` : ''}
                 </div>
             </div>
         `;
@@ -1343,22 +1341,6 @@ class BookTracker {
 
     // Search and filter functions
     handleSearch() {
-        const searchInput = document.getElementById('searchInput');
-        if (!searchInput) return;
-        
-        const query = searchInput.value.toLowerCase().trim();
-        
-        if (query) {
-            this.filteredBooks = this.books.filter(book =>
-                book.title.toLowerCase().includes(query) ||
-                book.author.toLowerCase().includes(query) ||
-                book.series?.toLowerCase().includes(query) ||
-                book.publisher?.toLowerCase().includes(query)
-            );
-        } else {
-            this.filteredBooks = [...this.books];
-        }
-        
         this.renderBooks();
     }
 
@@ -1371,13 +1353,26 @@ class BookTracker {
     }
 
     applyFilters() {
+        const searchInput = document.getElementById('searchInput');
         const statusFilter = document.getElementById('statusFilter')?.value;
         const genreFilter = document.getElementById('genreFilter')?.value;
         
+        const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+        
         this.filteredBooks = this.books.filter(book => {
+            // Search match
+            const searchMatch = !query || (
+                book.title.toLowerCase().includes(query) ||
+                book.author.toLowerCase().includes(query) ||
+                book.series?.toLowerCase().includes(query) ||
+                book.publisher?.toLowerCase().includes(query)
+            );
+            
+            // Filter matches
             const statusMatch = !statusFilter || book.status === statusFilter;
             const genreMatch = !genreFilter || book.mythicalElement === genreFilter;
-            return statusMatch && genreMatch;
+            
+            return searchMatch && statusMatch && genreMatch;
         });
     }
 

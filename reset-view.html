@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reset BookTracker View</title>
+</head>
+<body>
+    <h2>Reset BookTracker View Preference</h2>
+    <p>Click the button below to reset your view preference to grid view (3-column layout):</p>
+    <button id="resetView" onclick="resetView()">Reset to Grid View</button>
+    <div id="status"></div>
+    
+    <script>
+        function resetView() {
+            localStorage.removeItem('bookTracker_view');
+            document.getElementById('status').innerHTML = '<p style="color: green;">✅ View preference reset! Refresh your BookTracker page to see the 3-column grid layout.</p>';
+        }
+    </script>
+</body>
+</html>

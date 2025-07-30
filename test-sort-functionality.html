@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Sort Functionality</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div style="padding: 20px;">
+        <h2>Test Sort Functionality</h2>
+        
+        <div style="margin: 20px 0;">
+            <select id="sortBy" class="filter-select">
+                <option value="title">Sort by Title</option>
+                <option value="author">Sort by Author</option>
+                <option value="series">Sort by Series</option>
+                <option value="rating">Sort by Rating</option>
+                <option value="dateAdded">Sort by Date Added</option>
+                <option value="dateRead">Sort by Read Date</option>
+            </select>
+            <button onclick="testSort()" style="margin-left: 10px;">Manual Test Sort</button>
+        </div>
+
+        <div id="testResults" style="font-family: monospace; background: #f5f5f5; padding: 10px; border-radius: 5px; margin: 20px 0;"></div>
+        
+        <div id="booksContainer" class="books-container"></div>
+        <div id="emptyState" class="empty-state hidden">No books found</div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        let bookTracker;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            bookTracker = new BookTracker();
+            
+            // Add some test books with different properties
+            const testBooks = [
+                {
+                    id: 'test1',
+                    title: 'Zebra Book',
+                    author: 'Author A',
+                    series: 'Series Z',
+                    rating: 5,
+                    dateAdded: '2024-01-01T00:00:00Z',
+                    finishedReading: '2024-01-15T00:00:00Z',
+                    status: 'read'
+                },
+                {
+                    id: 'test2',
+                    title: 'Alpha Book',
+                    author: 'Author Z',
+                    series: 'Series A',
+                    rating: 3,
+                    dateAdded: '2024-02-01T00:00:00Z',
+                    finishedReading: '2024-02-15T00:00:00Z',
+                    status: 'read'
+                },
+                {
+                    id: 'test3',
+                    title: 'Middle Book',
+                    author: 'Author M',
+                    series: 'Series M',
+                    rating: 4,
+                    dateAdded: '2024-03-01T00:00:00Z',
+                    finishedReading: null,
+                    status: 'currently-reading'
+                }
+            ];
+            
+            // Override books with test data
+            bookTracker.books = testBooks;
+            bookTracker.filteredBooks = [...testBooks];
+            
+            console.log('Test books loaded:', bookTracker.books.length);
+            testSort();
+        });
+
+        function testSort() {
+            const sortBy = document.getElementById('sortBy').value;
+            const results = document.getElementById('testResults');
+            
+            console.log('Testing sort by:', sortBy);
+            results.innerHTML = `Testing sort by: ${sortBy}\n\nBefore sorting:\n`;
+            
+            bookTracker.books.forEach((book, index) => {
+                results.innerHTML += `${index + 1}. ${book.title} by ${book.author} (Rating: ${book.rating || 'N/A'})\n`;
+            });
+            
+            // Apply sorting
+            bookTracker.filteredBooks = [...bookTracker.books];
+            bookTracker.applySorting();
+            
+            results.innerHTML += `\nAfter sorting by ${sortBy}:\n`;
+            bookTracker.filteredBooks.forEach((book, index) => {
+                results.innerHTML += `${index + 1}. ${book.title} by ${book.author} (Rating: ${book.rating || 'N/A'})\n`;
+            });
+            
+            // Test the actual render
+            bookTracker.renderBooks();
+        }
+    </script>
+</body>
+</html>
