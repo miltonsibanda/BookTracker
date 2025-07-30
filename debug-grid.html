@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grid Layout Diagnostic</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .diagnostic {
+            background: #fff;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 8px;
+            border: 2px solid #e5e7eb;
+        }
+        .test-controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        .status.success { background: #d1fae5; color: #065f46; }
+        .status.error { background: #fee2e2; color: #991b1b; }
+        .status.info { background: #dbeafe; color: #1e40af; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="diagnostic">
+            <h1>📐 Grid Layout Diagnostic Tool</h1>
+            <p>This page tests the grid layout functionality in isolation.</p>
+            
+            <div class="test-controls">
+                <button class="btn btn--primary" onclick="testGridLayout()">Test Grid Layout</button>
+                <button class="btn btn--secondary" onclick="addTestBooks()">Add Test Books</button>
+                <button class="btn btn--secondary" onclick="toggleToGrid()">Force Grid View</button>
+                <button class="btn btn--secondary" onclick="toggleToList()">Force List View</button>
+                <button class="btn btn--secondary" onclick="inspectContainer()">Inspect Container</button>
+            </div>
+            
+            <div id="diagnosticResults"></div>
+        </div>
+        
+        <!-- Test Controls -->
+        <nav class="controls">
+            <div class="controls__right">
+                <div class="view-toggle">
+                    <button class="btn btn--icon view-toggle__btn active" id="gridView" onclick="toggleToGrid()">
+                        <i class="fas fa-th"></i>
+                    </button>
+                    <button class="btn btn--icon view-toggle__btn" id="listView" onclick="toggleToList()">
+                        <i class="fas fa-list"></i>
+                    </button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Books Container -->
+        <main class="content">
+            <div class="books-container" id="booksContainer">
+                <!-- Test books will be added here -->
+            </div>
+            
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <div class="empty-state__icon">
+                    <i class="fas fa-book"></i>
+                </div>
+                <h2 class="empty-state__title">No books to display</h2>
+                <p class="empty-state__description">Add test books to see the grid layout in action.</p>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let currentView = 'grid';
+        let testBooks = [];
+
+        function log(message, type = 'info') {
+            const results = document.getElementById('diagnosticResults');
+            const statusClass = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+            results.innerHTML += `<div class="status ${statusClass}"><strong>[${new Date().toLocaleTimeString()}]</strong> ${message}</div>`;
+            results.scrollTop = results.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('diagnosticResults').innerHTML = '';
+        }
+
+        function testGridLayout() {
+            clearLog();
+            log('🧪 Starting Grid Layout Test...', 'info');
+            
+            const container = document.getElementById('booksContainer');
+            if (!container) {
+                log('❌ Container not found!', 'error');
+                return;
+            }
+            
+            log('✅ Container found', 'success');
+            
+            // Check CSS properties
+            const styles = getComputedStyle(container);
+            log(`📐 Container display: ${styles.display}`, 'info');
+            log(`📐 Grid template columns: ${styles.gridTemplateColumns}`, 'info');
+            log(`📐 Gap: ${styles.gap}`, 'info');
+            log(`📐 Class name: ${container.className}`, 'info');
+            
+            // Test responsiveness
+            const width = window.innerWidth;
+            log(`📱 Window width: ${width}px`, 'info');
+            
+            if (width >= 1025) {
+                log('📱 Should show 3 columns (desktop)', 'info');
+            } else if (width >= 769) {
+                log('📱 Should show 2 columns (tablet)', 'info');
+            } else {
+                log('📱 Should show 1 column (mobile)', 'info');
+            }
+            
+            log('✅ Grid layout test completed', 'success');
+        }
+
+        function addTestBooks() {
+            const container = document.getElementById('booksContainer');
+            const emptyState = document.getElementById('emptyState');
+            
+            if (!container) return;
+            
+            testBooks = [
+                {
+                    id: '1',
+                    title: 'Test Book One',
+                    author: 'Test Author',
+                    status: 'read',
+                    rating: 4,
+                    mythicalElement: 'fae'
+                },
+                {
+                    id: '2',
+                    title: 'Test Book Two',
+                    author: 'Another Author',
+                    status: 'currently-reading',
+                    rating: 3.5,
+                    mythicalElement: 'vampire'
+                },
+                {
+                    id: '3',
+                    title: 'Test Book Three',
+                    author: 'Third Author',
+                    status: 'want-to-read',
+                    rating: 0,
+                    mythicalElement: 'shifter'
+                }
+            ];
+            
+            container.innerHTML = testBooks.map(book => `
+                <div class="book-card" data-id="${book.id}">
+                    <div class="book-card__header">
+                        <div class="book-card__info">
+                            <div class="book-card__cover">
+                                <div class="book-card__no-cover"><i class="fas fa-book"></i></div>
+                            </div>
+                            <div class="book-card__details">
+                                <h3 class="book-card__title">${book.title}</h3>
+                                <p class="book-card__author">by ${book.author}</p>
+                            </div>
+                        </div>
+                        <div class="book-card__actions">
+                            <button class="btn btn--small btn--primary">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                        </div>
+                    </div>
+                    <div class="book-card__body">
+                        <div class="book-card__meta">
+                            <div class="book-card__meta-item">
+                                <span class="book-card__meta-label">Rating</span>
+                                <div class="book-card__meta-value">
+                                    ${book.rating ? `${book.rating} stars` : 'No rating'}
+                                </div>
+                            </div>
+                            <div class="book-card__meta-item">
+                                <span class="book-card__meta-label">Genre</span>
+                                <span class="book-card__meta-value">${book.mythicalElement}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="book-card__footer">
+                        <div class="book-card__status status--${book.status}">
+                            ${book.status.replace('-', ' ')}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            container.style.display = 'block';
+            emptyState.style.display = 'none';
+            
+            log(`✅ Added ${testBooks.length} test books`, 'success');
+            log('📚 Books should now be visible in grid layout', 'info');
+        }
+
+        function toggleToGrid() {
+            currentView = 'grid';
+            const container = document.getElementById('booksContainer');
+            const gridBtn = document.getElementById('gridView');
+            const listBtn = document.getElementById('listView');
+            
+            if (container) {
+                container.className = 'books-container';
+            }
+            
+            if (gridBtn) gridBtn.classList.add('active');
+            if (listBtn) listBtn.classList.remove('active');
+            
+            log('🔄 Switched to grid view', 'success');
+            testGridLayout();
+        }
+
+        function toggleToList() {
+            currentView = 'list';
+            const container = document.getElementById('booksContainer');
+            const gridBtn = document.getElementById('gridView');
+            const listBtn = document.getElementById('listView');
+            
+            if (container) {
+                container.className = 'books-container list-view';
+            }
+            
+            if (gridBtn) gridBtn.classList.remove('active');
+            if (listBtn) listBtn.classList.add('active');
+            
+            log('🔄 Switched to list view', 'success');
+            testGridLayout();
+        }
+
+        function inspectContainer() {
+            const container = document.getElementById('booksContainer');
+            if (!container) return;
+            
+            clearLog();
+            log('🔍 Container Inspection:', 'info');
+            log(`📐 Class: ${container.className}`, 'info');
+            log(`📐 Children: ${container.children.length}`, 'info');
+            log(`📐 Display: ${getComputedStyle(container).display}`, 'info');
+            log(`📐 Grid columns: ${getComputedStyle(container).gridTemplateColumns}`, 'info');
+            log(`📐 Gap: ${getComputedStyle(container).gap}`, 'info');
+            log(`📐 Width: ${container.offsetWidth}px`, 'info');
+            log(`📐 Height: ${container.offsetHeight}px`, 'info');
+            
+            // Check individual cards
+            const cards = container.querySelectorAll('.book-card');
+            log(`📚 Book cards found: ${cards.length}`, 'info');
+            
+            if (cards.length > 0) {
+                const firstCard = cards[0];
+                log(`📚 First card width: ${firstCard.offsetWidth}px`, 'info');
+                log(`📚 First card height: ${firstCard.offsetHeight}px`, 'info');
+            }
+        }
+
+        // Auto-run diagnostic on load
+        window.addEventListener('load', function() {
+            log('🚀 Grid Layout Diagnostic Tool loaded', 'success');
+            log('💡 Click "Add Test Books" then "Test Grid Layout" to verify functionality', 'info');
+        });
+
+        // Listen for window resize
+        window.addEventListener('resize', function() {
+            if (testBooks.length > 0) {
+                testGridLayout();
+            }
+        });
+    </script>
+</body>
+</html>

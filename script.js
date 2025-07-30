@@ -162,6 +162,17 @@ class BookTracker {
             this.setupAutocomplete();
             console.log('Autocomplete setup completed');
             
+            // Ensure we start in grid view
+            this.currentView = 'grid';
+            const gridBtn = document.getElementById('gridView');
+            const listBtn = document.getElementById('listView');
+            if (gridBtn) gridBtn.classList.add('active');
+            if (listBtn) listBtn.classList.remove('active');
+            console.log('View set to grid mode');
+            
+            // Force grid layout initialization
+            this.forceGridLayout();
+            
             this.renderBooks();
             console.log('Books rendered');
             
@@ -283,6 +294,13 @@ class BookTracker {
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
+        
+        // Window resize for responsive grid
+        window.addEventListener('resize', () => {
+            if (this.currentView === 'grid') {
+                this.forceGridLayout();
+            }
+        });
         
         console.log('Event binding completed successfully');
     }
@@ -1129,14 +1147,20 @@ class BookTracker {
 
     // Enhanced render functions
     renderBooks() {
+        console.log('renderBooks called, currentView:', this.currentView);
         const container = document.getElementById('booksContainer');
         const emptyState = document.getElementById('emptyState');
         
-        if (!container || !emptyState) return;
+        if (!container || !emptyState) {
+            console.error('Container or empty state element not found');
+            return;
+        }
 
         // Apply current filters and sorting
         this.applyFilters();
         this.applySorting();
+
+        console.log('Filtered books count:', this.filteredBooks.length);
 
         if (this.filteredBooks.length === 0) {
             container.style.display = 'none';
@@ -1148,14 +1172,23 @@ class BookTracker {
         emptyState.style.display = 'none';
 
         if (this.currentView === 'grid') {
+            console.log('Rendering grid view');
             this.renderGridView(container);
         } else {
+            console.log('Rendering list view');
             this.renderListView(container);
         }
+        
+        console.log('Final container className:', container.className);
     }
 
     renderGridView(container) {
+        console.log('Rendering grid view...');
         container.className = 'books-container';
+        
+        // Force responsive grid properties
+        this.applyResponsiveGrid(container);
+        
         container.innerHTML = this.filteredBooks.map(book => {
             const physicalFeatures = this.getPhysicalFeatures(book);
             const specialEdition = this.isSpecialEdition(book);
@@ -1163,12 +1196,19 @@ class BookTracker {
             return `
             <div class="book-card" data-id="${book.id}">
                 <div class="book-card__header">
-                    <div class="book-card__cover">
-                        ${book.coverImage ? 
-                            `<img src="${book.coverImage}" alt="${this.escapeHtml(book.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                             <div class="book-card__no-cover" style="display: none;"><i class="fas fa-book"></i></div>` :
-                            `<div class="book-card__no-cover"><i class="fas fa-book"></i></div>`
-                        }
+                    <div class="book-card__info">
+                        <div class="book-card__cover">
+                            ${book.coverImage ? 
+                                `<img src="${book.coverImage}" alt="${this.escapeHtml(book.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                                 <div class="book-card__no-cover" style="display: none;"><i class="fas fa-book"></i></div>` :
+                                `<div class="book-card__no-cover"><i class="fas fa-book"></i></div>`
+                            }
+                        </div>
+                        <div class="book-card__details">
+                            <h3 class="book-card__title ${specialEdition ? 'book-card__special-edition' : ''}">${this.escapeHtml(book.title)}</h3>
+                            <p class="book-card__author">by ${this.escapeHtml(book.author)}</p>
+                            ${book.series ? `<p class="book-card__series"><i class="fas fa-layer-group"></i>${this.escapeHtml(book.series)}${book.bookNumber ? ` #${book.bookNumber}` : ''}</p>` : ''}
+                        </div>
                     </div>
                     <div class="book-card__actions">
                         <button class="btn btn--small btn--primary" onclick="bookTracker.openModal(bookTracker.books.find(b => b.id === '${book.id}'))">
@@ -1179,18 +1219,33 @@ class BookTracker {
                         </button>
                     </div>
                 </div>
-                <div class="book-card__content">
-                    <h3 class="book-card__title ${specialEdition ? 'book-card__special-edition' : ''}">${this.escapeHtml(book.title)}</h3>
-                    <p class="book-card__author">by ${this.escapeHtml(book.author)}</p>
-                    ${book.series ? `<p class="book-card__series">${this.escapeHtml(book.series)}${book.bookNumber ? ` #${book.bookNumber}` : ''}</p>` : ''}
-                    <div class="book-card__rating">
-                        ${this.renderStarRating(book.rating)}
+                <div class="book-card__body">
+                    <div class="book-card__meta">
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Rating</span>
+                            <div class="book-card__meta-value">
+                                ${this.renderStarRating(book.rating)}
+                            </div>
+                        </div>
+                        ${book.mythicalElement ? `
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Genre</span>
+                            <span class="book-card__meta-value">${this.escapeHtml(book.mythicalElement)}</span>
+                        </div>
+                        ` : ''}
+                        ${book.pageCount ? `
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Pages</span>
+                            <span class="book-card__meta-value">${book.pageCount}</span>
+                        </div>
+                        ` : ''}
+                        ${book.publisher ? `
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Publisher</span>
+                            <span class="book-card__meta-value">${this.escapeHtml(book.publisher)}</span>
+                        </div>
+                        ` : ''}
                     </div>
-                    <div class="book-card__status status--${book.status}">
-                        ${this.getStatusLabel(book.status)}
-                    </div>
-                    ${book.mythicalElement ? `<div class="book-card__genre">${this.escapeHtml(book.mythicalElement)}</div>` : ''}
-                    ${book.gifted ? `<div class="book-card__gifted"><i class="fas fa-gift"></i> Gift</div>` : ''}
                     ${physicalFeatures.length > 0 ? `
                         <div class="book-card__physical-features">
                             ${physicalFeatures.map(feature => `
@@ -1201,6 +1256,12 @@ class BookTracker {
                             `).join('')}
                         </div>
                     ` : ''}
+                </div>
+                <div class="book-card__footer">
+                    <div class="book-card__status status--${book.status}">
+                        ${this.getStatusLabel(book.status)}
+                    </div>
+                    ${book.gifted ? `<div class="book-card__gifted"><i class="fas fa-gift"></i> Gift</div>` : ''}
                 </div>
             </div>
         `;
@@ -1208,7 +1269,14 @@ class BookTracker {
     }
 
     renderListView(container) {
+        console.log('Rendering list view...');
         container.className = 'books-container list-view';
+        
+        // Force list properties
+        container.style.display = 'grid';
+        container.style.gridTemplateColumns = '1fr';
+        container.style.gap = '1rem';
+        
         container.innerHTML = this.filteredBooks.map(book => {
             const physicalFeatures = this.getPhysicalFeatures(book);
             const specialEdition = this.isSpecialEdition(book);
@@ -1216,12 +1284,19 @@ class BookTracker {
             return `
             <div class="book-card" data-id="${book.id}">
                 <div class="book-card__header">
-                    <div class="book-card__cover">
-                        ${book.coverImage ? 
-                            `<img src="${book.coverImage}" alt="${this.escapeHtml(book.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                             <div class="book-card__no-cover" style="display: none;"><i class="fas fa-book"></i></div>` :
-                            `<div class="book-card__no-cover"><i class="fas fa-book"></i></div>`
-                        }
+                    <div class="book-card__info">
+                        <div class="book-card__cover">
+                            ${book.coverImage ? 
+                                `<img src="${book.coverImage}" alt="${this.escapeHtml(book.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                                 <div class="book-card__no-cover" style="display: none;"><i class="fas fa-book"></i></div>` :
+                                `<div class="book-card__no-cover"><i class="fas fa-book"></i></div>`
+                            }
+                        </div>
+                        <div class="book-card__details">
+                            <h3 class="book-card__title ${specialEdition ? 'book-card__special-edition' : ''}">${this.escapeHtml(book.title)}</h3>
+                            <p class="book-card__author">by ${this.escapeHtml(book.author)}</p>
+                            ${book.series ? `<p class="book-card__series"><i class="fas fa-layer-group"></i>${this.escapeHtml(book.series)}${book.bookNumber ? ` #${book.bookNumber}` : ''}</p>` : ''}
+                        </div>
                     </div>
                     <div class="book-card__actions">
                         <button class="btn btn--small btn--primary" onclick="bookTracker.openModal(bookTracker.books.find(b => b.id === '${book.id}'))">
@@ -1232,19 +1307,47 @@ class BookTracker {
                         </button>
                     </div>
                 </div>
-                <div class="book-card__content">
-                    <h3 class="book-card__title ${specialEdition ? 'book-card__special-edition' : ''}">${this.escapeHtml(book.title)}</h3>
-                    <p class="book-card__author">by ${this.escapeHtml(book.author)}</p>
-                    ${book.series ? `<p class="book-card__series">${this.escapeHtml(book.series)}${book.bookNumber ? ` #${book.bookNumber}` : ''}</p>` : ''}
-                    <div class="book-card__rating">
-                        ${this.renderStarRating(book.rating)}
+                <div class="book-card__body">
+                    <div class="book-card__meta">
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Rating</span>
+                            <div class="book-card__meta-value">
+                                ${this.renderStarRating(book.rating)}
+                            </div>
+                        </div>
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Status</span>
+                            <div class="book-card__meta-value">
+                                <span class="book-card__status status--${book.status}">
+                                    ${this.getStatusLabel(book.status)}
+                                </span>
+                            </div>
+                        </div>
+                        ${book.mythicalElement ? `
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Genre</span>
+                            <span class="book-card__meta-value">${this.escapeHtml(book.mythicalElement)}</span>
+                        </div>
+                        ` : ''}
+                        ${book.pageCount ? `
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Pages</span>
+                            <span class="book-card__meta-value">${book.pageCount}</span>
+                        </div>
+                        ` : ''}
+                        ${book.publisher ? `
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Publisher</span>
+                            <span class="book-card__meta-value">${this.escapeHtml(book.publisher)}</span>
+                        </div>
+                        ` : ''}
+                        ${book.finishedReading ? `
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Read Date</span>
+                            <span class="book-card__meta-value">${new Date(book.finishedReading).toLocaleDateString()}</span>
+                        </div>
+                        ` : ''}
                     </div>
-                    <div class="book-card__status status--${book.status}">
-                        ${this.getStatusLabel(book.status)}
-                    </div>
-                    ${book.mythicalElement ? `<div class="book-card__genre">${this.escapeHtml(book.mythicalElement)}</div>` : ''}
-                    ${book.pageCount ? `<div class="book-card__pages">${book.pageCount} pages</div>` : ''}
-                    ${book.gifted ? `<div class="book-card__gifted"><i class="fas fa-gift"></i> Gift</div>` : ''}
                     ${physicalFeatures.length > 0 ? `
                         <div class="book-card__physical-features">
                             ${physicalFeatures.map(feature => `
@@ -1255,6 +1358,10 @@ class BookTracker {
                             `).join('')}
                         </div>
                     ` : ''}
+                </div>
+                <div class="book-card__footer">
+                    ${book.gifted ? `<div class="book-card__gifted"><i class="fas fa-gift"></i> Gift</div>` : ''}
+                    ${book.notes ? `<div class="book-card__notes"><i class="fas fa-sticky-note"></i> Has notes</div>` : ''}
                 </div>
             </div>
         `;
@@ -1406,17 +1513,61 @@ class BookTracker {
     }
 
     toggleView(view) {
+        console.log('toggleView called with:', view);
         this.currentView = view;
         
         const gridBtn = document.getElementById('gridView');
         const listBtn = document.getElementById('listView');
+        const container = document.getElementById('booksContainer');
         
         if (gridBtn && listBtn) {
             gridBtn.classList.toggle('active', view === 'grid');
             listBtn.classList.toggle('active', view === 'list');
+            console.log('Button states updated:', {
+                gridActive: gridBtn.classList.contains('active'),
+                listActive: listBtn.classList.contains('active')
+            });
+        }
+        
+        if (container) {
+            console.log('Container class before:', container.className);
+            console.log('Current view:', this.currentView);
         }
         
         this.renderBooks();
+        
+        if (container) {
+            console.log('Container class after:', container.className);
+        }
+    }
+
+    // Force grid layout to ensure proper styling
+    forceGridLayout() {
+        const container = document.getElementById('booksContainer');
+        if (container) {
+            console.log('🔧 Forcing grid layout...');
+            container.className = 'books-container';
+            this.applyResponsiveGrid(container);
+            console.log('✅ Grid layout forced with responsive columns');
+        }
+    }
+
+    // Apply responsive grid properties
+    applyResponsiveGrid(container) {
+        container.style.display = 'grid';
+        
+        // Set responsive grid columns based on screen size
+        const width = window.innerWidth;
+        if (width >= 1025) {
+            container.style.gridTemplateColumns = 'repeat(3, 1fr)';
+            container.style.gap = '1.5rem';
+        } else if (width >= 769) {
+            container.style.gridTemplateColumns = 'repeat(2, 1fr)';
+            container.style.gap = '1rem';
+        } else {
+            container.style.gridTemplateColumns = '1fr';
+            container.style.gap = '1rem';
+        }
     }
 
     // Import/Export functions
@@ -1668,6 +1819,54 @@ try {
                 }
             } else {
                 console.error('BookTracker not initialized');
+            }
+        },
+        
+        testGrid: () => {
+            console.log('🧪 Manual Grid Test');
+            if (window.bookTracker) {
+                console.log('Current view:', window.bookTracker.currentView);
+                console.log('Books count:', window.bookTracker.books.length);
+                
+                // Force grid view
+                window.bookTracker.currentView = 'grid';
+                window.bookTracker.renderBooks();
+                
+                const container = document.getElementById('booksContainer');
+                if (container) {
+                    console.log('Container class after force grid:', container.className);
+                    console.log('Container computed styles:', {
+                        display: getComputedStyle(container).display,
+                        gridTemplateColumns: getComputedStyle(container).gridTemplateColumns,
+                        gap: getComputedStyle(container).gap
+                    });
+                }
+                
+                // Update button states
+                const gridBtn = document.getElementById('gridView');
+                const listBtn = document.getElementById('listView');
+                if (gridBtn) gridBtn.classList.add('active');
+                if (listBtn) listBtn.classList.remove('active');
+                
+                console.log('✅ Grid test completed');
+            } else {
+                console.error('BookTracker not available');
+            }
+        },
+        
+        forceGridLayout: () => {
+            console.log('🔧 Forcing grid layout...');
+            if (window.bookTracker) {
+                window.bookTracker.forceGridLayout();
+            } else {
+                const container = document.getElementById('booksContainer');
+                if (container) {
+                    container.className = 'books-container';
+                    container.style.display = 'grid';
+                    container.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                    container.style.gap = '1.5rem';
+                    console.log('✅ Grid layout forced via CSS (fallback)');
+                }
             }
         },
         
