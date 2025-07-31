@@ -6,20 +6,23 @@ services:
       - "3001:3001"
     volumes:
       - booktracker-data:/app/data
+      - booktracker-backups:/app/backups
     restart: unless-stopped
     environment:
       - NODE_ENV=production
       - PORT=3001
       - DATA_DIR=/app/data
     labels:
-      - "com.booktracker.description=BookTracker API - Backend Service"
-      - "com.booktracker.version=1.0"
+      - "com.booktracker.description=BookTracker API - Backend Service with SQLite"
+      - "com.booktracker.version=2.0"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    networks:
+      - booktracker-network
 
   booktracker:
     build: .
@@ -35,14 +38,22 @@ services:
       - API_URL=http://booktracker-api:3001
     labels:
       - "com.booktracker.description=BookTracker - Personal Book Collection Manager"
-      - "com.booktracker.version=1.0"
+      - "com.booktracker.version=2.0"
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      test: ["CMD", "curl", "-f", "http://localhost/"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    networks:
+      - booktracker-network
 
 volumes:
   booktracker-data:
     driver: local
+  booktracker-backups:
+    driver: local
+
+networks:
+  booktracker-network:
+    driver: bridge

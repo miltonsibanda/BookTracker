@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Connection Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .success { background: #d1fae5; color: #065f46; }
+        .error { background: #fee2e2; color: #991b1b; }
+        .info { background: #dbeafe; color: #1e40af; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 8px; }
+        button { padding: 10px 20px; margin: 5px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #2563eb; }
+        pre { background: #f3f4f6; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>📡 BookTracker API Connection Test</h1>
+    
+    <div class="test-section">
+        <h3>Connection Status</h3>
+        <div id="status">Testing...</div>
+    </div>
+    
+    <div class="test-section">
+        <h3>API Tests</h3>
+        <button onclick="testHealth()">Test Health Endpoint</button>
+        <button onclick="testBooks()">Test Books Endpoint</button>
+        <button onclick="testCreateBook()">Test Create Book</button>
+        <button onclick="clearResults()">Clear Results</button>
+        <div id="results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h3>Network Info</h3>
+        <div id="networkInfo">
+            <p><strong>Current URL:</strong> <span id="currentUrl"></span></p>
+            <p><strong>API Base URL:</strong> <span id="apiUrl"></span></p>
+        </div>
+    </div>
+
+    <script>
+        class APITester {
+            constructor() {
+                this.baseUrl = this.getApiUrl();
+                this.updateNetworkInfo();
+                this.testConnection();
+            }
+            
+            getApiUrl() {
+                const hostname = window.location.hostname;
+                if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+                    return '/api';
+                }
+                return 'http://localhost:3001/api';
+            }
+            
+            updateNetworkInfo() {
+                document.getElementById('currentUrl').textContent = window.location.href;
+                document.getElementById('apiUrl').textContent = this.baseUrl;
+            }
+            
+            log(message, type = 'info') {
+                const results = document.getElementById('results');
+                const div = document.createElement('div');
+                div.className = `status ${type}`;
+                div.innerHTML = `<strong>[${new Date().toLocaleTimeString()}]</strong> ${message}`;
+                results.appendChild(div);
+                results.scrollTop = results.scrollHeight;
+            }
+            
+            async testConnection() {
+                const status = document.getElementById('status');
+                try {
+                    const response = await fetch(`${this.baseUrl}/health`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        status.innerHTML = `<div class="status success">✅ Connected to API - ${data.message}</div>`;
+                    } else {
+                        status.innerHTML = `<div class="status error">❌ API returned ${response.status}</div>`;
+                    }
+                } catch (error) {
+                    status.innerHTML = `<div class="status error">❌ Cannot connect to API: ${error.message}</div>`;
+                }
+            }
+            
+            async testHealth() {
+                this.log('Testing health endpoint...', 'info');
+                try {
+                    const response = await fetch(`${this.baseUrl}/health`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.log(`✅ Health check passed: ${JSON.stringify(data)}`, 'success');
+                    } else {
+                        this.log(`❌ Health check failed: ${response.status}`, 'error');
+                    }
+                } catch (error) {
+                    this.log(`❌ Health check error: ${error.message}`, 'error');
+                }
+            }
+            
+            async testBooks() {
+                this.log('Testing books endpoint...', 'info');
+                try {
+                    const response = await fetch(`${this.baseUrl}/books`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.log(`✅ Books endpoint working: Found ${data.length} books`, 'success');
+                        if (data.length > 0) {
+                            this.log(`📚 Sample book: ${JSON.stringify(data[0], null, 2)}`, 'info');
+                        }
+                    } else {
+                        this.log(`❌ Books endpoint failed: ${response.status}`, 'error');
+                    }
+                } catch (error) {
+                    this.log(`❌ Books endpoint error: ${error.message}`, 'error');
+                }
+            }
+            
+            async testCreateBook() {
+                this.log('Testing create book...', 'info');
+                const testBook = {
+                    title: 'API Test Book',
+                    author: 'Test Author',
+                    status: 'want-to-read',
+                    rating: 0
+                };
+                
+                try {
+                    const response = await fetch(`${this.baseUrl}/books`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(testBook)
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.log(`✅ Book created successfully: ${JSON.stringify(data)}`, 'success');
+                    } else {
+                        this.log(`❌ Create book failed: ${response.status}`, 'error');
+                    }
+                } catch (error) {
+                    this.log(`❌ Create book error: ${error.message}`, 'error');
+                }
+            }
+            
+            clearResults() {
+                document.getElementById('results').innerHTML = '';
+            }
+        }
+        
+        window.addEventListener('load', () => {
+            window.apiTester = new APITester();
+        });
+    </script>
+</body>
+</html>

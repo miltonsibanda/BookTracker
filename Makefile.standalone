@@ -1,0 +1,181 @@
+# BookTracker Standalone Docker Makefile
+# For systems without docker-compose
+
+.PHONY: help build run stop clean logs shell test status network-info backup
+
+# Default target
+help:
+	@echo "📚 BookTracker Standalone Docker Commands:"
+	@echo ""
+	@echo "  build         - Build the Docker images"
+	@echo "  run           - Run the application with standalone Docker"
+	@echo "  stop          - Stop all running containers"
+	@echo "  clean         - Stop and remove containers and images"
+	@echo "  logs          - View container logs"
+	@echo "  shell         - Open a shell in the frontend container"
+	@echo "  shell-api     - Open a shell in the API container"
+	@echo "  test          - Test the application health"
+	@echo "  status        - Show container status"
+	@echo "  network-info  - Show network access information"
+	@echo "  backup        - Create database backup"
+	@echo ""
+	@echo "🌐 Cross-Device Access:"
+	@echo "  After running 'make run', access from any device on your network!"
+	@echo ""
+
+# Build the Docker images
+build:
+	@echo "🔨 Building BookTracker Docker images..."
+	@echo "Building API image..."
+	docker build -t booktracker-api:latest ./backend
+	@echo "Building frontend image..."
+	docker build -t booktracker-frontend:latest .
+	@echo "✅ Build complete!"
+
+# Create network and volume
+setup:
+	@echo "🔧 Setting up Docker network and volume..."
+	docker network create booktracker-network 2>/dev/null || true
+	docker volume create booktracker-data 2>/dev/null || true
+	@echo "✅ Setup complete!"
+
+# Run the application
+run: setup build
+	@echo "🚀 Starting BookTracker with standalone Docker..."
+	
+	@echo "Starting API container..."
+	docker run -d \
+		--name booktracker-api \
+		--network booktracker-network \
+		-p 3001:3001 \
+		-v booktracker-data:/app/data \
+		-e NODE_ENV=production \
+		booktracker-api:latest
+	
+	@echo "Waiting for API to be ready..."
+	@sleep 3
+	
+	@echo "Starting frontend container..."
+	docker run -d \
+		--name booktracker-frontend \
+		--network booktracker-network \
+		-p 8081:80 \
+		booktracker-frontend:latest
+	
+	@echo "✅ BookTracker is running!"
+	@echo ""
+	@make network-info
+
+# Stop all containers
+stop:
+	@echo "⏹️ Stopping BookTracker containers..."
+	docker stop booktracker-frontend booktracker-api 2>/dev/null || true
+	docker rm booktracker-frontend booktracker-api 2>/dev/null || true
+	@echo "✅ Containers stopped (data preserved in volumes)"
+
+# Clean up everything except volumes
+clean: stop
+	@echo "🧹 Cleaning up Docker resources..."
+	docker rmi booktracker-api:latest booktracker-frontend:latest 2>/dev/null || true
+	docker network rm booktracker-network 2>/dev/null || true
+	docker system prune -f
+	@echo "✅ Cleanup complete (data volumes preserved)"
+
+# DANGER: Remove everything including data
+deep-clean: clean
+	@echo "⚠️  WARNING: This will DELETE ALL DATA including your book collection!"
+	@echo "Press Ctrl+C to cancel, or wait 10 seconds to continue..."
+	@sleep 10
+	@echo "🗑️  Removing everything including data volumes..."
+	docker volume rm booktracker-data 2>/dev/null || true
+	docker system prune -af
+	@echo "💥 Everything removed including all data!"
+
+# View logs
+logs:
+	@echo "📋 Viewing BookTracker logs..."
+	@echo "=== API Logs ==="
+	docker logs booktracker-api --tail 50
+	@echo ""
+	@echo "=== Frontend Logs ==="
+	docker logs booktracker-frontend --tail 50
+
+# View API logs only
+logs-api:
+	@echo "📋 Viewing BookTracker API logs..."
+	docker logs -f booktracker-api
+
+# View frontend logs only  
+logs-frontend:
+	@echo "📋 Viewing BookTracker frontend logs..."
+	docker logs -f booktracker-frontend
+
+# Open shell in frontend container
+shell:
+	@echo "🐚 Opening shell in BookTracker frontend container..."
+	docker exec -it booktracker-frontend sh
+
+# Open shell in API container
+shell-api:
+	@echo "🐚 Opening shell in BookTracker API container..."
+	docker exec -it booktracker-api sh
+
+# Test the application
+test:
+	@echo "🧪 Testing BookTracker application..."
+	@echo ""
+	@echo "Testing frontend..."
+	@if curl -s -o /dev/null -w "%{http_code}" http://localhost:8081 | grep -q "200"; then \
+		echo "✅ Frontend is responding correctly"; \
+	else \
+		echo "❌ Frontend test failed"; \
+	fi
+	@echo ""
+	@echo "Testing API..."
+	@if curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/health | grep -q "200"; then \
+		echo "✅ API is responding correctly"; \
+		echo "📊 API Health:"; \
+		curl -s http://localhost:3001/api/health | python3 -m json.tool 2>/dev/null || curl -s http://localhost:3001/api/health; \
+	else \
+		echo "❌ API test failed"; \
+	fi
+
+# Show container status
+status:
+	@echo "📊 BookTracker Status:"
+	@echo ""
+	@echo "🐳 Containers:"
+	@docker ps --filter "name=booktracker" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+	@echo ""
+	@echo "💾 Volumes:"
+	@docker volume ls | grep booktracker || echo "No BookTracker volumes found"
+	@echo ""
+	@echo "🌐 Networks:"
+	@docker network ls | grep booktracker || echo "No BookTracker networks found"
+
+# Show network access information
+network-info:
+	@echo "🌐 BookTracker Network Access Information:"
+	@echo ""
+	@echo "📱 Access from this computer:"
+	@echo "   Frontend: http://localhost:8081"
+	@echo "   API:      http://localhost:3001"
+	@echo ""
+	@echo "🌍 Access from other devices on your network:"
+	@for ip in $$(hostname -I 2>/dev/null | tr ' ' '\n' | head -3) $$(ifconfig 2>/dev/null | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $$2}' | head -3); do \
+		if [ "$$ip" != "" ]; then \
+			echo "   Frontend: http://$$ip:8081"; \
+			echo "   API:      http://$$ip:3001"; \
+		fi; \
+	done
+	@echo ""
+	@echo "💡 Tip: Use the frontend URL on other devices to access your book collection!"
+
+# Create database backup
+backup:
+	@echo "💾 Creating database backup..."
+	@docker exec booktracker-api curl -X POST http://localhost:3001/api/backup
+	@echo "✅ Backup created"
+
+# Quick restart
+restart: stop run

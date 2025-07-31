@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Frontend Connection</title>
+</head>
+<body>
+    <h1>Frontend Connection Debug</h1>
+    <div id="status">Testing...</div>
+    <div id="logs"></div>
+
+    <script>
+        // Simple API class for testing
+        class APIClient {
+            constructor() {
+                this.baseUrl = this.detectAPIUrl();
+                console.log('API URL detected:', this.baseUrl);
+            }
+
+            detectAPIUrl() {
+                // Check if we're running in a Docker environment
+                const hostname = window.location.hostname;
+                const port = window.location.port;
+                
+                console.log(`Current hostname: ${hostname}, port: ${port}`);
+                
+                // If accessing via Docker frontend (port 8081), use nginx proxy
+                if (port === '8081') {
+                    return '/api'; // Use relative URL, nginx will proxy to backend
+                }
+                
+                // If accessing via non-localhost hostname, use relative proxy
+                if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+                    return '/api'; // Use relative URL, nginx will proxy to backend
+                }
+                
+                // Default for local development (direct access)
+                return 'http://localhost:3001/api';
+            }
+
+            async request(endpoint, options = {}) {
+                const url = `${this.baseUrl}${endpoint}`;
+                const config = {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                };
+
+                console.log(`Making request to: ${url}`);
+                try {
+                    const response = await fetch(url, config);
+                    console.log(`Response status: ${response.status}`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const data = await response.json();
+                    console.log('Response data:', data);
+                    return data;
+                } catch (error) {
+                    console.error(`API request failed: ${error.message}`);
+                    throw error;
+                }
+            }
+
+            async testConnection() {
+                try {
+                    const health = await this.request('/health');
+                    console.log('API Health Check:', health);
+                    return health.status === 'ok';
+                } catch (error) {
+                    console.warn('API connection test failed:', error);
+                    return false;
+                }
+            }
+        }
+
+        // Test function
+        async function runTests() {
+            const statusDiv = document.getElementById('status');
+            const logsDiv = document.getElementById('logs');
+
+            function addLog(message) {
+                const logEntry = document.createElement('div');
+                logEntry.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+                logsDiv.appendChild(logEntry);
+                console.log(message);
+            }
+
+            addLog('Starting connection test...');
+            statusDiv.textContent = 'Testing connection...';
+
+            try {
+                const api = new APIClient();
+                addLog(`API URL: ${api.baseUrl}`);
+
+                // Test 1: Basic fetch to health endpoint
+                addLog('Test 1: Direct fetch to health endpoint');
+                try {
+                    const directResponse = await fetch(`${api.baseUrl}/health`);
+                    addLog(`Direct fetch status: ${directResponse.status}`);
+                    const directData = await directResponse.json();
+                    addLog(`Direct fetch data: ${JSON.stringify(directData)}`);
+                } catch (error) {
+                    addLog(`Direct fetch failed: ${error.message}`);
+                }
+
+                // Test 2: API client test
+                addLog('Test 2: Using API client');
+                const connectionOk = await api.testConnection();
+                addLog(`API connection test result: ${connectionOk}`);
+
+                // Test 3: Books endpoint
+                addLog('Test 3: Testing books endpoint');
+                try {
+                    const books = await api.request('/books');
+                    addLog(`Books endpoint response: ${JSON.stringify(books)}`);
+                } catch (error) {
+                    addLog(`Books endpoint failed: ${error.message}`);
+                }
+
+                statusDiv.textContent = connectionOk ? 'Connection successful!' : 'Connection failed!';
+                statusDiv.style.color = connectionOk ? 'green' : 'red';
+
+            } catch (error) {
+                addLog(`Test failed: ${error.message}`);
+                statusDiv.textContent = 'Test failed!';
+                statusDiv.style.color = 'red';
+            }
+        }
+
+        // Run tests when page loads
+        window.addEventListener('load', runTests);
+    </script>
+</body>
+</html>

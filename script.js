@@ -40,15 +40,20 @@ class BookTrackerAPI {
 
     getApiUrl() {
         // Check if we're running in a Docker environment
-        // by trying to detect the hostname or environment
         const hostname = window.location.hostname;
+        const port = window.location.port;
         
-        // If accessing via Docker (not localhost), use the internal Docker service name
+        // If accessing via Docker frontend (port 8081), use nginx proxy
+        if (port === '8081') {
+            return '/api'; // Use relative URL, nginx will proxy to backend
+        }
+        
+        // If accessing via non-localhost hostname, use relative proxy
         if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
             return '/api'; // Use relative URL, nginx will proxy to backend
         }
         
-        // Default for local development
+        // Default for local development (direct access)
         return 'http://localhost:3001/api';
     }
 
@@ -139,16 +144,57 @@ class BookTracker {
         this.init();
     }
 
+    async testApiConnection() {
+        try {
+            const health = await this.api.request('/health');
+            console.log('API Health Check:', health);
+            return health.status === 'ok';
+        } catch (error) {
+            console.warn('API connection test failed:', error);
+            return false;
+        }
+    }
+
+    updateConnectionStatus(status, message) {
+        const indicator = document.getElementById('connectionIndicator');
+        const text = document.getElementById('connectionText');
+        
+        if (indicator && text) {
+            // Remove existing status classes
+            indicator.classList.remove('connected', 'disconnected', 'connecting');
+            
+            // Add new status class
+            indicator.classList.add(status);
+            text.textContent = message;
+            
+            console.log(`Connection status: ${status} - ${message}`);
+        }
+    }
+
     async init() {
         try {
             console.log('BookTracker initialization started...');
+            
+            // Show connecting status
+            this.updateConnectionStatus('connecting', 'Connecting to database...');
+            
+            // Test API connection first
+            const apiConnected = await this.testApiConnection();
+            
+            if (apiConnected) {
+                this.updateConnectionStatus('connected', 'Connected to database');
+            } else {
+                this.updateConnectionStatus('disconnected', 'Using local storage only');
+            }
             
             // Load books from both local storage and server
             await this.loadBooksFromStorage();
             console.log('Books loaded from storage:', this.books.length);
             
-            await this.syncWithServer();
-            console.log('Server sync completed');
+            if (apiConnected) {
+                await this.syncWithServer();
+                console.log('Server sync completed');
+            }
             
             this.bindEvents();
             console.log('Events bound successfully');
@@ -662,26 +708,60 @@ class BookTracker {
     // Enhanced Storage operations with API sync
     async saveBooksToStorage() {
         try {
-            // Save to localStorage first (immediate)
+            // Always save to localStorage first for immediate backup
             localStorage.setItem('bookTracker_books', JSON.stringify(this.books));
+            console.log('Books saved to localStorage');
             
-            // Sync with server if online (in background)
-            if (this.api.isOnline && !this.syncInProgress) {
-                this.syncWithServer();
+            // Try to sync with server if online
+            if (this.api.isOnline) {
+                try {
+                    const apiConnected = await this.testApiConnection();
+                    if (apiConnected && !this.syncInProgress) {
+                        console.log('Syncing with server...');
+                        await this.syncWithServer();
+                    }
+                } catch (error) {
+                    console.error('Server sync failed:', error);
+                }
             }
         } catch (error) {
-            console.error('Error saving books to localStorage:', error);
+            console.error('Error saving books:', error);
         }
     }
 
     async loadBooksFromStorage() {
         try {
+            // First try to load from API if connected
+            const apiConnected = await this.testApiConnection();
+            
+            if (apiConnected) {
+                console.log('Loading books from API server...');
+                try {
+                    const serverBooks = await this.api.getBooks();
+                    if (serverBooks && serverBooks.length > 0) {
+                        this.books = serverBooks;
+                        // Save to localStorage as backup
+                        localStorage.setItem('bookTracker_books', JSON.stringify(this.books));
+                        console.log(`Loaded ${this.books.length} books from server`);
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Failed to load from API:', error);
+                }
+            }
+            
+            // Fallback to localStorage if API fails or no data
+            console.log('Loading books from localStorage...');
             const stored = localStorage.getItem('bookTracker_books');
             if (stored) {
                 this.books = JSON.parse(stored);
+                console.log(`Loaded ${this.books.length} books from localStorage`);
+            } else {
+                console.log('No books found in localStorage');
+                this.books = [];
             }
         } catch (error) {
-            console.error('Error loading books from localStorage:', error);
+            console.error('Error loading books:', error);
             this.books = [];
         }
     }

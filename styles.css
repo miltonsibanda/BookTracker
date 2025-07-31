@@ -281,6 +281,50 @@ body {
     color: var(--text-white);
 }
 
+/* Connection Status */
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-2) var(--spacing-3);
+    background: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+}
+
+.connection-status__indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    animation: pulse 2s infinite;
+}
+
+.connection-status__indicator.connected {
+    background: #10b981;
+    animation: none;
+}
+
+.connection-status__indicator.disconnected {
+    background: #ef4444;
+    animation: none;
+}
+
+.connection-status__text {
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
 /* Button Styles */
 .btn {
     display: inline-flex;

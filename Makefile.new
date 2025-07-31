@@ -1,45 +1,11 @@
 # BookTracker Docker Makefile - Cross-Device Persistence
 # Automatically detects docker-compose availability and provides alternatives
 
-.PHONY: help # Run in development mode (same as run)
-dev: run
+.PHONY: help build run stop clean logs shell dev prod test status restart network-info check-docker
 
-# Run in production mode
-prod: check-docker
-ifdef COMPOSE_CMD
-	@echo "🏭 Starting BookTracker in production mode..."
-	$(COMPOSE_CMD) -f docker-compose.prod.yml up -d 2>/dev/null || $(COMPOSE_CMD) up -d
-else
-	@echo "🏭 Starting BookTracker in production mode (standalone Docker)..."
-	$(MAKE) run
-endif
-	@echo "✅ BookTracker production instance is running"
-	@$(MAKE) network-info
-
-# Stop all containers
-stop: check-docker
-	@echo "⏹️ Stopping BookTracker containers..."
-ifdef COMPOSE_CMD
-	$(COMPOSE_CMD) down 2>/dev/null || true
-else
-	docker stop booktracker-frontend booktracker-api 2>/dev/null || true
-	docker rm booktracker-frontend booktracker-api 2>/dev/null || true
-endif
-	@echo "✅ Containers stopped (data preserved in volumes)"clean logs shell dev prod test status restart network-info check-docker
-
-# Check if docker compose is available (V2 or V1)
-HAS_DOCKER_COMPOSE_V2 := $(shell docker compose version 2>/dev/null)
-HAS_DOCKER_COMPOSE_V1 := $(shell command -v docker-compose 2>/dev/null)
+# Check if docker-compose is available
+HAS_DOCKER_COMPOSE := $(shell command -v docker-compose 2>/dev/null)
 HAS_DOCKER := $(shell command -v docker 2>/dev/null)
-
-# Determine which compose command to use
-ifdef HAS_DOCKER_COMPOSE_V2
-    COMPOSE_CMD = docker compose
-else ifdef HAS_DOCKER_COMPOSE_V1
-    COMPOSE_CMD = docker-compose
-else
-    COMPOSE_CMD = 
-endif
 
 # Default target
 help: check-docker
@@ -79,25 +45,23 @@ ifndef HAS_DOCKER
 	@echo ""
 	@exit 1
 endif
-ifndef COMPOSE_CMD
-	@echo "⚠️  Docker Compose not found - using standalone Docker commands"
+ifndef HAS_DOCKER_COMPOSE
+	@echo "⚠️  docker-compose not found - using standalone Docker commands"
 	@echo ""
-	@echo "💡 To install Docker Compose:"
+	@echo "💡 To install docker-compose:"
 	@echo "   make install-compose"
 	@echo ""
 	@echo "Or continue with standalone Docker (works the same way!)"
 	@echo ""
-else
-	@echo "✅ Using Docker Compose: $(COMPOSE_CMD)"
 endif
 
 # Install docker-compose
 install-compose:
-	@echo "🔧 Installing Docker Compose..."
-ifdef COMPOSE_CMD
-	@echo "✅ Docker Compose is already installed: $(COMPOSE_CMD)"
+	@echo "🔧 Installing docker-compose..."
+ifdef HAS_DOCKER_COMPOSE
+	@echo "✅ docker-compose is already installed"
 else
-	@echo "Installing Docker Compose for your system..."
+	@echo "Installing docker-compose for your system..."
 	@if [ "$$(uname)" = "Darwin" ]; then \
 		echo "Installing via Homebrew..."; \
 		brew install docker-compose || { \
@@ -120,8 +84,8 @@ endif
 # Build the Docker images
 build: check-docker
 	@echo "🔨 Building BookTracker Docker images with SQLite database..."
-ifdef COMPOSE_CMD
-	$(COMPOSE_CMD) build
+ifdef HAS_DOCKER_COMPOSE
+	docker-compose build
 else
 	@echo "Building API image..."
 	docker build -t booktracker-api:latest ./backend
@@ -137,21 +101,14 @@ setup-standalone:
 	docker volume create booktracker-data 2>/dev/null || true
 	@echo "✅ Setup complete!"
 
-# Clean up any existing containers to avoid conflicts
-cleanup-containers:
-	@echo "🧹 Cleaning up any existing containers..."
-	docker stop booktracker-api booktracker-frontend 2>/dev/null || true
-	docker rm booktracker-api booktracker-frontend 2>/dev/null || true
-
-# Run with Docker Compose (development)
+# Run with Docker Compose or standalone
 run: check-docker
-ifdef COMPOSE_CMD
-	@echo "🚀 Starting BookTracker with Docker Compose..."
+ifdef HAS_DOCKER_COMPOSE
+	@echo "🚀 Starting BookTracker with docker-compose..."
 	$(MAKE) build
-	$(COMPOSE_CMD) up -d
+	docker-compose up -d
 else
 	@echo "🚀 Starting BookTracker with standalone Docker..."
-	$(MAKE) cleanup-containers
 	$(MAKE) setup-standalone
 	$(MAKE) build
 	
@@ -178,26 +135,41 @@ endif
 	@echo ""
 	@$(MAKE) network-info
 
-# Run in development mode (same as run)
+# Run in development mode (same as run for now)
 dev: run
 
 # Run in production mode
-prod:
+prod: check-docker
+ifdef HAS_DOCKER_COMPOSE
 	@echo "🏭 Starting BookTracker in production mode..."
-	docker-compose -f docker-compose.prod.yml up -d
+	docker-compose -f docker-compose.prod.yml up -d 2>/dev/null || docker-compose up -d
+else
+	@echo "🏭 Starting BookTracker in production mode (standalone Docker)..."
+	$(MAKE) run
+endif
 	@echo "✅ BookTracker production instance is running"
-	@make network-info
+	@$(MAKE) network-info
 
 # Stop all containers
-stop:
-	@echo "� Stopping BookTracker containers..."
-	docker-compose down
+stop: check-docker
+	@echo "⏹️ Stopping BookTracker containers..."
+ifdef HAS_DOCKER_COMPOSE
+	docker-compose down 2>/dev/null || true
+else
+	docker stop booktracker-frontend booktracker-api 2>/dev/null || true
+	docker rm booktracker-frontend booktracker-api 2>/dev/null || true
+endif
 	@echo "✅ Containers stopped (data preserved in volumes)"
 
 # Clean up everything except volumes
 clean: stop
 	@echo "🧹 Cleaning up Docker resources..."
-	docker-compose down --rmi local
+ifdef HAS_DOCKER_COMPOSE
+	docker-compose down --rmi local 2>/dev/null || true
+else
+	docker rmi booktracker-api:latest booktracker-frontend:latest 2>/dev/null || true
+	docker network rm booktracker-network 2>/dev/null || true
+endif
 	docker system prune -f
 	@echo "✅ Cleanup complete (data volumes preserved)"
 
@@ -207,34 +179,71 @@ deep-clean:
 	@echo "Press Ctrl+C to cancel, or wait 10 seconds to continue..."
 	@sleep 10
 	@echo "🗑️  Removing everything including data volumes..."
-	docker-compose down -v --rmi all
+ifdef HAS_DOCKER_COMPOSE
+	docker-compose down -v --rmi all 2>/dev/null || true
+else
+	docker stop booktracker-frontend booktracker-api 2>/dev/null || true
+	docker rm booktracker-frontend booktracker-api 2>/dev/null || true
+	docker rmi booktracker-api:latest booktracker-frontend:latest 2>/dev/null || true
+	docker volume rm booktracker-data 2>/dev/null || true
+	docker network rm booktracker-network 2>/dev/null || true
+endif
 	docker system prune -af
 	@echo "💥 Everything removed including all data!"
 
 # View logs
-logs:
+logs: check-docker
+ifdef HAS_DOCKER_COMPOSE
 	@echo "📋 Viewing BookTracker logs..."
 	docker-compose logs -f
+else
+	@echo "📋 Viewing BookTracker logs..."
+	@echo "=== API Logs ==="
+	docker logs booktracker-api --tail 50
+	@echo ""
+	@echo "=== Frontend Logs ==="
+	docker logs booktracker-frontend --tail 50
+endif
 
 # View API logs only
-logs-api:
+logs-api: check-docker
+ifdef HAS_DOCKER_COMPOSE
 	@echo "📋 Viewing BookTracker API logs..."
 	docker-compose logs -f booktracker-api
+else
+	@echo "📋 Viewing BookTracker API logs..."
+	docker logs -f booktracker-api
+endif
 
 # View app logs only  
-logs-app:
+logs-app: check-docker
+ifdef HAS_DOCKER_COMPOSE
 	@echo "📋 Viewing BookTracker app logs..."
 	docker-compose logs -f booktracker
+else
+	@echo "📋 Viewing BookTracker frontend logs..."
+	docker logs -f booktracker-frontend
+endif
 
 # Open shell in frontend container
-shell:
-	@echo "� Opening shell in BookTracker frontend container..."
+shell: check-docker
+ifdef HAS_DOCKER_COMPOSE
+	@echo "🐚 Opening shell in BookTracker frontend container..."
 	docker-compose exec booktracker sh
+else
+	@echo "🐚 Opening shell in BookTracker frontend container..."
+	docker exec -it booktracker-frontend sh
+endif
 
 # Open shell in API container
-shell-api:
+shell-api: check-docker
+ifdef HAS_DOCKER_COMPOSE
 	@echo "🐚 Opening shell in BookTracker API container..."
 	docker-compose exec booktracker-api sh
+else
+	@echo "🐚 Opening shell in BookTracker API container..."
+	docker exec -it booktracker-api sh
+endif
 
 # Test the application
 test:
@@ -251,23 +260,31 @@ test:
 	@if curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/health | grep -q "200"; then \
 		echo "✅ API is responding correctly"; \
 		echo "📊 API Health:"; \
-		curl -s http://localhost:3001/api/health | jq .; \
+		curl -s http://localhost:3001/api/health | python3 -m json.tool 2>/dev/null || curl -s http://localhost:3001/api/health; \
 	else \
 		echo "❌ API test failed"; \
 	fi
 
 # Show container status
-status:
+status: check-docker
 	@echo "📊 BookTracker Status:"
 	@echo ""
 	@echo "🐳 Containers:"
+ifdef HAS_DOCKER_COMPOSE
 	@docker-compose ps 2>/dev/null || echo "No containers running"
+else
+	@docker ps --filter "name=booktracker" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || echo "No containers running"
+endif
 	@echo ""
 	@echo "💾 Volumes:"
 	@docker volume ls | grep booktracker || echo "No BookTracker volumes found"
 	@echo ""
 	@echo "📊 Volume Details:"
-	@docker volume inspect bookwebsite_booktracker-data 2>/dev/null | jq '.[0] | {Name, Mountpoint, CreatedAt}' || echo "Data volume not found"
+ifdef HAS_DOCKER_COMPOSE
+	@docker volume inspect bookwebsite_booktracker-data 2>/dev/null | jq '.[0] | {Name, Mountpoint, CreatedAt}' 2>/dev/null || echo "Data volume not found"
+else
+	@docker volume inspect booktracker-data 2>/dev/null | python3 -c "import sys, json; data=json.load(sys.stdin); print(json.dumps({k: data[0][k] for k in ['Name', 'Mountpoint', 'CreatedAt']}, indent=2))" 2>/dev/null || echo "Data volume not found"
+endif
 
 # Show network access information
 network-info:
@@ -278,33 +295,36 @@ network-info:
 	@echo "   API:      http://localhost:3001"
 	@echo ""
 	@echo "🌍 Access from other devices on your network:"
-	@for ip in $$(hostname -I 2>/dev/null || ifconfig | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $$2}' | head -3); do \
-		echo "   Frontend: http://$$ip:8081"; \
-		echo "   API:      http://$$ip:3001"; \
+	@for ip in $$(hostname -I 2>/dev/null | tr ' ' '\n' | head -3) $$(ifconfig 2>/dev/null | grep 'inet ' | grep -v '127.0.0.1' | awk '{print $$2}' | head -3); do \
+		if [ "$$ip" != "" ]; then \
+			echo "   Frontend: http://$$ip:8081"; \
+			echo "   API:      http://$$ip:3001"; \
+		fi; \
 	done
 	@echo ""
 	@echo "💡 Tip: Use the frontend URL on other devices to access your book collection!"
 
 # Create database backup
-backup:
+backup: check-docker
 	@echo "💾 Creating database backup..."
+ifdef HAS_DOCKER_COMPOSE
 	@docker-compose exec booktracker-api curl -X POST http://localhost:3001/api/backup
+else
+	@docker exec booktracker-api curl -X POST http://localhost:3001/api/backup
+endif
 	@echo "✅ Backup created"
 
 # Quick restart
 restart: stop run
 
-# Force clean restart (stops everything and starts fresh)
-clean-restart: 
-	@echo "🔄 Performing clean restart..."
-	$(MAKE) stop
-	$(MAKE) cleanup-containers
-	$(MAKE) run
-
 # Initialize database (force)
-init-db:
+init-db: check-docker
 	@echo "🗄️ Initializing database..."
-	@docker-compose exec booktracker-api node scripts/init-db.js
+ifdef HAS_DOCKER_COMPOSE
+	@docker-compose exec booktracker-api node scripts/init-db.js 2>/dev/null || echo "Database initialization not needed"
+else
+	@docker exec booktracker-api node scripts/init-db.js 2>/dev/null || echo "Database initialization not needed"
+endif
 	@echo "✅ Database initialized"
 
 # Show help for cross-device setup
@@ -326,3 +346,7 @@ cross-device-help:
 	@echo "   - Make sure devices are on the same network"
 	@echo "   - Check firewall settings allow port 8081 and 3001"
 	@echo "   - Use 'make test' to verify everything is working"
+	@echo ""
+	@echo "🛠️ Alternative methods:"
+	@echo "   - If docker-compose is missing: make install-compose"
+	@echo "   - Standalone Docker commands work automatically"

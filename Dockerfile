@@ -1,6 +1,9 @@
 # Use the official Nginx image to serve static files
 FROM nginx:alpine
 
+# Install curl for healthcheck
+RUN apk add --no-cache curl
+
 # Set the working directory in the container
 WORKDIR /usr/share/nginx/html
 

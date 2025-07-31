@@ -1,0 +1,112 @@
+# Simple Docker commands for BookTracker - No docker-compose required!
+
+.PHONY: help quick-start build run stop clean logs test
+
+# Quick start for users without docker-compose
+quick-start:
+	@echo "🚀 Quick Start - BookTracker (Cross-Device Persistence)"
+	@echo ""
+	@echo "This will build and run BookTracker using simple Docker commands."
+	@echo "No docker-compose required!"
+	@echo ""
+	@echo "Building and starting..."
+	$(MAKE) run
+	@echo ""
+	@echo "✅ BookTracker is now running!"
+	@echo "🌐 Access it at: http://localhost:8081"
+	@echo ""
+	@echo "💡 For other devices on your network:"
+	@echo "   Find your IP with: ifconfig | grep 'inet '"
+	@echo "   Then access: http://YOUR_IP:8081"
+
+help:
+	@echo "📚 BookTracker - Simple Docker Commands"
+	@echo ""
+	@echo "  quick-start   - Build and run everything (recommended)"
+	@echo "  run           - Run the application"
+	@echo "  stop          - Stop all containers"
+	@echo "  logs          - View application logs"
+	@echo "  test          - Test if everything is working"
+	@echo "  clean         - Clean up containers (keeps data)"
+	@echo ""
+	@echo "🌐 Cross-Device Access:"
+	@echo "  Your books sync across all devices on the same network!"
+
+# Build images
+build:
+	@echo "🔨 Building BookTracker images..."
+	docker build -t booktracker-api:latest ./backend
+	docker build -t booktracker-frontend:latest .
+
+# Setup Docker resources
+setup:
+	@echo "🔧 Setting up Docker resources..."
+	docker network create booktracker-network 2>/dev/null || true
+	docker volume create booktracker-data 2>/dev/null || true
+
+# Run the application
+run: setup build
+	@echo "🚀 Starting BookTracker..."
+	
+	# Stop any existing containers
+	docker stop booktracker-api booktracker-frontend 2>/dev/null || true
+	docker rm booktracker-api booktracker-frontend 2>/dev/null || true
+	
+	# Start API
+	docker run -d \
+		--name booktracker-api \
+		--network booktracker-network \
+		-p 3001:3001 \
+		-v booktracker-data:/app/data \
+		-e NODE_ENV=production \
+		booktracker-api:latest
+	
+	# Wait for API
+	sleep 3
+	
+	# Start frontend
+	docker run -d \
+		--name booktracker-frontend \
+		--network booktracker-network \
+		-p 8081:80 \
+		booktracker-frontend:latest
+	
+	@echo "✅ BookTracker is running at http://localhost:8081"
+
+# Stop containers
+stop:
+	@echo "⏹️ Stopping BookTracker..."
+	docker stop booktracker-frontend booktracker-api 2>/dev/null || true
+	docker rm booktracker-frontend booktracker-api 2>/dev/null || true
+	@echo "✅ Stopped (your data is safe in Docker volumes)"
+
+# View logs
+logs:
+	@echo "📋 BookTracker Logs:"
+	@echo "=== API Logs ==="
+	docker logs booktracker-api --tail 20 2>/dev/null || echo "API not running"
+	@echo ""
+	@echo "=== Frontend Logs ==="
+	docker logs booktracker-frontend --tail 20 2>/dev/null || echo "Frontend not running"
+
+# Test the application
+test:
+	@echo "🧪 Testing BookTracker..."
+	@if curl -s http://localhost:8081 > /dev/null; then \
+		echo "✅ Frontend is working"; \
+	else \
+		echo "❌ Frontend not responding"; \
+	fi
+	@if curl -s http://localhost:3001/api/health > /dev/null; then \
+		echo "✅ API is working"; \
+	else \
+		echo "❌ API not responding"; \
+	fi
+
+# Clean up (keep data)
+clean: stop
+	@echo "🧹 Cleaning up..."
+	docker rmi booktracker-api:latest booktracker-frontend:latest 2>/dev/null || true
+	docker network rm booktracker-network 2>/dev/null || true
+	# Keep the data volume!
+	@echo "✅ Cleaned up (data volume preserved)"
