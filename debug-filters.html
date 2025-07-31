@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filter Debug Tool</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .status.success { background: #d1fae5; color: #065f46; }
+        .status.error { background: #fee2e2; color: #991b1b; }
+        .status.info { background: #dbeafe; color: #1e40af; }
+        select, button { margin: 5px; padding: 8px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Filter Debugging Tool</h1>
+    
+    <div class="debug-section">
+        <h2>1. Test Filter Elements</h2>
+        <button onclick="testFilterElements()">Check Filter Elements</button>
+        <div id="elementResults"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>2. Test Filter Values</h2>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <select id="statusFilter">
+                <option value="">All Status</option>
+                <option value="want-to-read">Want to Read</option>
+                <option value="currently-reading">Currently Reading</option>
+                <option value="read">Read</option>
+                <option value="dnf">DNF</option>
+            </select>
+            
+            <select id="genreFilter">
+                <option value="">All Genres</option>
+                <option value="fae">Fae</option>
+                <option value="shifter">Shifter</option>
+                <option value="vampire">Vampire</option>
+                <option value="human">Human</option>
+                <option value="werewolf">Werewolf</option>
+                <option value="other">Other</option>
+            </select>
+
+            <select id="tropeFilter">
+                <option value="">All Tropes</option>
+                <option value="chosen-one">Chosen One</option>
+                <option value="love-triangle">Love Triangle</option>
+                <option value="enemies-to-lovers">Enemies to Lovers</option>
+                <option value="friends-to-lovers">Friends to Lovers</option>
+                <option value="slow-burn">Slow Burn</option>
+                <option value="found-family">Found Family</option>
+                <option value="forbidden-love">Forbidden Love</option>
+                <option value="redemption-arc">Redemption Arc</option>
+                <option value="morally-grey">Morally Grey</option>
+                <option value="fake-relationship">Fake Relationship</option>
+                <option value="second-chance">Second Chance</option>
+                <option value="why-choose">Why Choose</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        <button onclick="testFilterValues()">Test Filter Values</button>
+        <div id="valueResults"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>3. Test Filter Logic</h2>
+        <button onclick="testFilterLogic()">Test Filter Logic</button>
+        <div id="logicResults"></div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>4. Console Monitoring</h2>
+        <p>Open browser console (F12) and watch for error messages when using filters.</p>
+        <div id="consoleResults"></div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const statusClass = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+            return `<div class="status ${statusClass}"><strong>[${new Date().toLocaleTimeString()}]</strong> ${message}</div>`;
+        }
+
+        function testFilterElements() {
+            const results = document.getElementById('elementResults');
+            let output = '';
+            
+            const filters = ['statusFilter', 'genreFilter', 'tropeFilter'];
+            
+            filters.forEach(filterId => {
+                const element = document.getElementById(filterId);
+                if (element) {
+                    output += log(`✅ ${filterId}: Found (${element.tagName})`, 'success');
+                    output += log(`   Options count: ${element.options.length}`, 'info');
+                    output += log(`   Current value: "${element.value}"`, 'info');
+                } else {
+                    output += log(`❌ ${filterId}: NOT FOUND`, 'error');
+                }
+            });
+            
+            results.innerHTML = output;
+        }
+
+        function testFilterValues() {
+            const results = document.getElementById('valueResults');
+            let output = '';
+            
+            const statusFilter = document.getElementById('statusFilter')?.value;
+            const genreFilter = document.getElementById('genreFilter')?.value;
+            const tropeFilter = document.getElementById('tropeFilter')?.value;
+            
+            output += log(`Status Filter: "${statusFilter}"`, statusFilter ? 'success' : 'info');
+            output += log(`Genre Filter: "${genreFilter}"`, genreFilter ? 'success' : 'info');
+            output += log(`Trope Filter: "${tropeFilter}"`, tropeFilter ? 'success' : 'info');
+            
+            results.innerHTML = output;
+        }
+
+        function testFilterLogic() {
+            const results = document.getElementById('logicResults');
+            let output = '';
+            
+            // Sample book data for testing
+            const testBooks = [
+                {
+                    id: '1',
+                    title: 'Test Book 1',
+                    author: 'Test Author',
+                    status: 'read',
+                    mythicalElement: 'fae',
+                    trope: 'enemies-to-lovers'
+                },
+                {
+                    id: '2',
+                    title: 'Test Book 2',
+                    author: 'Another Author',
+                    status: 'currently-reading',
+                    mythicalElement: 'vampire',
+                    trope: 'slow-burn'
+                },
+                {
+                    id: '3',
+                    title: 'Test Book 3',
+                    author: 'Third Author',
+                    status: 'want-to-read',
+                    mythicalElement: 'shifter',
+                    trope: 'found-family'
+                }
+            ];
+            
+            const statusFilter = document.getElementById('statusFilter')?.value;
+            const genreFilter = document.getElementById('genreFilter')?.value;
+            const tropeFilter = document.getElementById('tropeFilter')?.value;
+            
+            output += log(`Testing with ${testBooks.length} sample books`, 'info');
+            output += log(`Filters: Status="${statusFilter}", Genre="${genreFilter}", Trope="${tropeFilter}"`, 'info');
+            
+            const filteredBooks = testBooks.filter(book => {
+                const statusMatch = !statusFilter || book.status === statusFilter;
+                const genreMatch = !genreFilter || book.mythicalElement === genreFilter;
+                const tropeMatch = !tropeFilter || book.trope === tropeFilter;
+                
+                output += log(`Book "${book.title}": Status(${statusMatch}), Genre(${genreMatch}), Trope(${tropeMatch}) = ${statusMatch && genreMatch && tropeMatch}`, 
+                    (statusMatch && genreMatch && tropeMatch) ? 'success' : 'error');
+                
+                return statusMatch && genreMatch && tropeMatch;
+            });
+            
+            output += log(`Result: ${filteredBooks.length} books match the filters`, 'success');
+            
+            results.innerHTML = output;
+        }
+
+        // Add event listeners to test real-time filtering
+        document.addEventListener('DOMContentLoaded', function() {
+            ['statusFilter', 'genreFilter', 'tropeFilter'].forEach(filterId => {
+                const element = document.getElementById(filterId);
+                if (element) {
+                    element.addEventListener('change', function() {
+                        console.log(`${filterId} changed to: "${this.value}"`);
+                        testFilterValues();
+                        testFilterLogic();
+                    });
+                }
+            });
+            
+            // Initial test
+            testFilterElements();
+        });
+    </script>
+</body>
+</html>

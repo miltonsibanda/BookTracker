@@ -419,17 +419,28 @@ BookTracker uses browser localStorage API:
 
 #### Common Issues
 
-1. **Application won't load**
+1. **500 Internal Server Error (Backend API)**
+   - **Symptoms**: Adding books fails with 500 error, console shows "HTTP error! status: 500"
+   - **Cause**: Missing Node.js dependencies in backend
+   - **Solution**: 
+     ```bash
+     cd backend
+     npm install
+     npm start
+     ```
+   - **Verification**: Run `node verify-install.js` in backend directory
+
+2. **Application won't load**
    - Check browser console for errors
    - Verify web server is running
    - Clear browser cache and localStorage
 
-2. **Docker container issues**
+3. **Docker container issues**
    - Check container logs: `docker logs booktracker-app`
    - Verify port availability: `netstat -tulpn | grep :8081`
    - Restart container: `docker restart booktracker-app`
 
-3. **Proxmox LXC issues**
+4. **Proxmox LXC issues**
    - Check container status: `pct status 200`
    - View container logs: `pct exec 200 -- tail -f /var/log/nginx/error.log`
    - Restart services: `pct exec 200 -- systemctl restart nginx`

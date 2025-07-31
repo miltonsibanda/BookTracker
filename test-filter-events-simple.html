@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚨 Quick Filter Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        select { margin: 10px; padding: 8px; }
+        .output { background: #f5f5f5; padding: 10px; border-radius: 4px; font-family: monospace; }
+        .working { border-color: #22c55e; background: #f0fdf4; }
+        .broken { border-color: #ef4444; background: #fef2f2; }
+    </style>
+</head>
+<body>
+    <h1>🚨 Quick Filter Test</h1>
+    <p>Testing if filter change events work at all...</p>
+    
+    <div class="test">
+        <h3>Test Filters:</h3>
+        <select id="statusFilter">
+            <option value="">All Status</option>
+            <option value="read">Read</option>
+            <option value="want-to-read">Want to Read</option>
+        </select>
+        
+        <select id="genreFilter">
+            <option value="">All Genres</option>
+            <option value="fae">Fae</option>
+            <option value="vampire">Vampire</option>
+        </select>
+
+        <select id="tropeFilter">
+            <option value="">All Tropes</option>
+            <option value="enemies-to-lovers">Enemies to Lovers</option>
+            <option value="slow-burn">Slow Burn</option>
+        </select>
+    </div>
+    
+    <div class="test">
+        <h3>Event Test Results:</h3>
+        <div id="output" class="output">
+            Waiting for filter changes...
+        </div>
+    </div>
+
+    <script>
+        let eventCount = 0;
+        
+        function logEvent(filterName, value) {
+            eventCount++;
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            output.innerHTML += `<br>[${timestamp}] ${filterName} changed to: "${value}" (Event #${eventCount})`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function setupFilters() {
+            console.log('Setting up filter event listeners...');
+            
+            const statusFilter = document.getElementById('statusFilter');
+            const genreFilter = document.getElementById('genreFilter');
+            const tropeFilter = document.getElementById('tropeFilter');
+            
+            if (statusFilter) {
+                statusFilter.addEventListener('change', (e) => {
+                    console.log('Status filter changed:', e.target.value);
+                    logEvent('Status Filter', e.target.value);
+                });
+                console.log('✅ Status filter event bound');
+            } else {
+                console.error('❌ Status filter not found');
+            }
+            
+            if (genreFilter) {
+                genreFilter.addEventListener('change', (e) => {
+                    console.log('Genre filter changed:', e.target.value);
+                    logEvent('Genre Filter', e.target.value);
+                });
+                console.log('✅ Genre filter event bound');
+            } else {
+                console.error('❌ Genre filter not found');
+            }
+            
+            if (tropeFilter) {
+                tropeFilter.addEventListener('change', (e) => {
+                    console.log('Trope filter changed:', e.target.value);
+                    logEvent('Trope Filter', e.target.value);
+                });
+                console.log('✅ Trope filter event bound');
+            } else {
+                console.error('❌ Trope filter not found');
+            }
+        }
+
+        // Test multiple timing scenarios
+        console.log('Running immediate setup...');
+        setupFilters();
+
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Running DOMContentLoaded setup...');
+            setupFilters();
+        });
+
+        window.addEventListener('load', () => {
+            console.log('Running window load setup...');
+            setupFilters();
+        });
+    </script>
+</body>
+</html>

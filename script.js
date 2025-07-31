@@ -312,6 +312,7 @@ class BookTracker {
         checkAndBind('searchInput', 'input', () => this.handleSearch());
         checkAndBind('clearSearch', 'click', () => this.clearSearch());
         checkAndBind('statusFilter', 'change', () => this.renderBooks());
+        checkAndBind('tropeFilter', 'change', () => this.renderBooks());
         checkAndBind('genreFilter', 'change', () => this.renderBooks());
         checkAndBind('sortBy', 'change', () => this.renderBooks());
 
@@ -966,6 +967,7 @@ class BookTracker {
             'bookCover': book.coverImage,
             'readingStatus': book.status,
             'mythicalElement': book.mythicalElement,
+            'trope': book.trope,
             'bookEdition': book.edition,
             'bookNotes': book.notes,
             'startedReading': book.startedReading,
@@ -1010,6 +1012,7 @@ class BookTracker {
             status: formData.get('status') || 'want-to-read',
             rating: this.getCurrentRating(),
             mythicalElement: formData.get('mythicalElement') || '',
+            trope: formData.get('trope') || '',
             publisher: formData.get('publisher') || '',
             pageCount: formData.get('pageCount') ? parseInt(formData.get('pageCount')) : null,
             coverImage: formData.get('coverImage') || '',
@@ -1313,6 +1316,12 @@ class BookTracker {
                             <span class="book-card__meta-value">${this.escapeHtml(book.mythicalElement)}</span>
                         </div>
                         ` : ''}
+                        ${book.trope ? `
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Trope</span>
+                            <span class="book-card__meta-value">${this.escapeHtml(book.trope)}</span>
+                        </div>
+                        ` : ''}
                         ${book.pageCount ? `
                         <div class="book-card__meta-item">
                             <span class="book-card__meta-label">Pages</span>
@@ -1407,6 +1416,12 @@ class BookTracker {
                         <div class="book-card__meta-item">
                             <span class="book-card__meta-label">Genre</span>
                             <span class="book-card__meta-value">${this.escapeHtml(book.mythicalElement)}</span>
+                        </div>
+                        ` : ''}
+                        ${book.trope ? `
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Trope</span>
+                            <span class="book-card__meta-value">${this.escapeHtml(book.trope)}</span>
                         </div>
                         ` : ''}
                         ${book.pageCount ? `
@@ -1543,6 +1558,7 @@ class BookTracker {
         const searchInput = document.getElementById('searchInput');
         const statusFilter = document.getElementById('statusFilter')?.value;
         const genreFilter = document.getElementById('genreFilter')?.value;
+        const tropeFilter = document.getElementById('tropeFilter')?.value;
         
         const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
         
@@ -1558,8 +1574,9 @@ class BookTracker {
             // Filter matches
             const statusMatch = !statusFilter || book.status === statusFilter;
             const genreMatch = !genreFilter || book.mythicalElement === genreFilter;
+            const tropeMatch = !tropeFilter || book.trope === tropeFilter;
             
-            return searchMatch && statusMatch && genreMatch;
+            return searchMatch && statusMatch && genreMatch && tropeMatch;
         });
     }
 

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Filter Debug - Direct Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+        .test-section { margin: 20px 0; padding: 20px; border: 2px solid #ddd; border-radius: 8px; }
+        .test-section h2 { margin-top: 0; color: #333; }
+        .filter-container { display: flex; gap: 15px; margin: 15px 0; flex-wrap: wrap; }
+        select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; min-width: 150px; }
+        .result { padding: 15px; margin: 10px 0; border-radius: 4px; font-family: monospace; }
+        .success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
+        .error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .info { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+        .warning { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+        .console-output { background: #1e293b; color: #e2e8f0; padding: 15px; border-radius: 4px; font-family: 'Courier New', monospace; max-height: 300px; overflow-y: auto; }
+        button { padding: 12px 20px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #2563eb; }
+        .test-books { display: grid; gap: 10px; margin: 15px 0; }
+        .test-book { padding: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; }
+        .book-visible { border-color: #22c55e; background: #f0fdf4; }
+        .book-hidden { opacity: 0.5; background: #f1f5f9; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Filter Debugging Tool - Live Test</h1>
+    <p><strong>Purpose:</strong> Test the exact same filter logic used in the main app to identify why genre and trope filters aren't working.</p>
+    
+    <div class="test-section">
+        <h2>1. Filter Controls (Exact Copy from Main App)</h2>
+        <div class="filter-container">
+            <select id="statusFilter">
+                <option value="">All Status</option>
+                <option value="want-to-read">Want to Read</option>
+                <option value="currently-reading">Currently Reading</option>
+                <option value="read">Read</option>
+                <option value="dnf">DNF</option>
+            </select>
+            
+            <select id="genreFilter">
+                <option value="">All Genres</option>
+                <option value="fae">Fae</option>
+                <option value="shifter">Shifter</option>
+                <option value="vampire">Vampire</option>
+                <option value="human">Human</option>
+                <option value="werewolf">Werewolf</option>
+                <option value="other">Other</option>
+            </select>
+
+            <select id="tropeFilter">
+                <option value="">All Tropes</option>
+                <option value="chosen-one">Chosen One</option>
+                <option value="love-triangle">Love Triangle</option>
+                <option value="enemies-to-lovers">Enemies to Lovers</option>
+                <option value="friends-to-lovers">Friends to Lovers</option>
+                <option value="slow-burn">Slow Burn</option>
+                <option value="found-family">Found Family</option>
+                <option value="forbidden-love">Forbidden Love</option>
+                <option value="redemption-arc">Redemption Arc</option>
+                <option value="morally-grey">Morally Grey</option>
+                <option value="fake-relationship">Fake Relationship</option>
+                <option value="second-chance">Second Chance</option>
+                <option value="why-choose">Why Choose</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+        
+        <button onclick="runFilterTest()">🧪 Test Filters</button>
+        <button onclick="checkElements()">🔍 Check Elements</button>
+        <button onclick="clearConsole()">🗑️ Clear Console</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Test Results</h2>
+        <div id="testResults" class="result info">Ready to test. Click "Test Filters" above.</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Sample Books (Filtering Test Data)</h2>
+        <div id="testBooks" class="test-books">
+            <!-- Books will be populated by JavaScript -->
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Console Output</h2>
+        <div id="consoleOutput" class="console-output">
+            Console messages will appear here...<br>
+        </div>
+    </div>
+
+    <script>
+        // Test data - exactly like what might be in the main app
+        const testBooks = [
+            {
+                id: '1',
+                title: 'Shadow and Bone',
+                author: 'Leigh Bardugo',
+                status: 'read',
+                mythicalElement: 'fae',
+                trope: 'chosen-one',
+                rating: 4
+            },
+            {
+                id: '2',
+                title: 'Fourth Wing',
+                author: 'Rebecca Yarros',
+                status: 'currently-reading',
+                mythicalElement: 'vampire',
+                trope: 'enemies-to-lovers',
+                rating: 5
+            },
+            {
+                id: '3',
+                title: 'Hunt on Dark Waters',
+                author: 'Katee Robert',
+                status: 'want-to-read',
+                mythicalElement: 'shifter',
+                trope: 'slow-burn',
+                rating: 0
+            },
+            {
+                id: '4',
+                title: 'The Seven Husbands of Evelyn Hugo',
+                author: 'Taylor Jenkins Reid',
+                status: 'read',
+                mythicalElement: 'human',
+                trope: 'found-family',
+                rating: 5
+            },
+            {
+                id: '5',
+                title: 'House of Earth and Blood',
+                author: 'Sarah J. Maas',
+                status: 'dnf',
+                mythicalElement: 'fae',
+                trope: 'enemies-to-lovers',
+                rating: 2
+            }
+        ];
+
+        let filteredBooks = [...testBooks];
+
+        // Exact copy of the applyFilters logic from main app
+        function applyFilters() {
+            const statusFilter = document.getElementById('statusFilter')?.value;
+            const genreFilter = document.getElementById('genreFilter')?.value;
+            const tropeFilter = document.getElementById('tropeFilter')?.value;
+            
+            logToConsole('[DEBUG] applyFilters called');
+            logToConsole(`[DEBUG] Filter values: status="${statusFilter}", genre="${genreFilter}", trope="${tropeFilter}"`);
+            
+            filteredBooks = testBooks.filter(book => {
+                // Filter matches
+                const statusMatch = !statusFilter || book.status === statusFilter;
+                const genreMatch = !genreFilter || book.mythicalElement === genreFilter;
+                const tropeMatch = !tropeFilter || book.trope === tropeFilter;
+                
+                const matches = statusMatch && genreMatch && tropeMatch;
+                
+                logToConsole(`[DEBUG] Book "${book.title}": status(${statusMatch}), genre(${genreMatch}), trope(${tropeMatch}) = ${matches}`);
+                
+                return matches;
+            });
+            
+            logToConsole(`[DEBUG] Filtered results: ${filteredBooks.length} of ${testBooks.length} books`);
+        }
+
+        function renderBooks() {
+            const container = document.getElementById('testBooks');
+            
+            container.innerHTML = testBooks.map(book => {
+                const isVisible = filteredBooks.includes(book);
+                return `
+                    <div class="test-book ${isVisible ? 'book-visible' : 'book-hidden'}">
+                        <strong>${book.title}</strong> by ${book.author}<br>
+                        Status: <code>${book.status}</code> | 
+                        Genre: <code>${book.mythicalElement}</code> | 
+                        Trope: <code>${book.trope}</code> | 
+                        Rating: ${book.rating}/5
+                        ${isVisible ? ' ✅ <em>VISIBLE</em>' : ' ❌ <em>HIDDEN</em>'}
+                    </div>
+                `;
+            }).join('');
+            
+            updateResults();
+        }
+
+        function updateResults() {
+            const results = document.getElementById('testResults');
+            const statusFilter = document.getElementById('statusFilter')?.value;
+            const genreFilter = document.getElementById('genreFilter')?.value;
+            const tropeFilter = document.getElementById('tropeFilter')?.value;
+            
+            const hasFilters = statusFilter || genreFilter || tropeFilter;
+            const visibleCount = filteredBooks.length;
+            
+            if (!hasFilters) {
+                results.className = 'result info';
+                results.innerHTML = `
+                    <strong>No filters applied</strong><br>
+                    Showing all ${testBooks.length} books
+                `;
+            } else {
+                const filterDesc = [];
+                if (statusFilter) filterDesc.push(`Status: ${statusFilter}`);
+                if (genreFilter) filterDesc.push(`Genre: ${genreFilter}`);
+                if (tropeFilter) filterDesc.push(`Trope: ${tropeFilter}`);
+                
+                if (visibleCount > 0) {
+                    results.className = 'result success';
+                    results.innerHTML = `
+                        <strong>✅ Filters working!</strong><br>
+                        Filters: ${filterDesc.join(', ')}<br>
+                        Showing ${visibleCount} of ${testBooks.length} books
+                    `;
+                } else {
+                    results.className = 'result warning';
+                    results.innerHTML = `
+                        <strong>⚠️ No matches found</strong><br>
+                        Filters: ${filterDesc.join(', ')}<br>
+                        No books match the current criteria
+                    `;
+                }
+            }
+        }
+
+        function checkElements() {
+            const elements = ['statusFilter', 'genreFilter', 'tropeFilter'];
+            
+            logToConsole('=== Element Check ===');
+            
+            elements.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    logToConsole(`✅ ${id}: Found (value="${element.value}")`);
+                } else {
+                    logToConsole(`❌ ${id}: NOT FOUND`);
+                }
+            });
+            
+            logToConsole('=== End Element Check ===');
+        }
+
+        function runFilterTest() {
+            logToConsole('=== Starting Filter Test ===');
+            checkElements();
+            applyFilters();
+            renderBooks();
+            logToConsole('=== Filter Test Complete ===');
+        }
+
+        function logToConsole(message) {
+            const output = document.getElementById('consoleOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            output.innerHTML += `[${timestamp}] ${message}<br>`;
+            output.scrollTop = output.scrollHeight;
+            
+            // Also log to real console
+            console.log(message);
+        }
+
+        function clearConsole() {
+            document.getElementById('consoleOutput').innerHTML = 'Console cleared...<br>';
+        }
+
+        // Set up event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            logToConsole('🚀 Filter Debug Tool loaded');
+            
+            // Add change listeners to all filters
+            ['statusFilter', 'genreFilter', 'tropeFilter'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.addEventListener('change', () => {
+                        logToConsole(`📝 ${id} changed to: "${element.value}"`);
+                        runFilterTest();
+                    });
+                    logToConsole(`✅ Event listener added to ${id}`);
+                } else {
+                    logToConsole(`❌ Failed to add event listener to ${id} - element not found`);
+                }
+            });
+            
+            // Initial render
+            renderBooks();
+            logToConsole('📊 Initial books rendered');
+        });
+    </script>
+</body>
+</html>

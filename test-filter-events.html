@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filter Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .filter-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        select { margin: 5px; padding: 8px; }
+        .result { margin: 10px 0; padding: 10px; background: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Filter Functionality Test</h1>
+    
+    <div class="filter-section">
+        <h2>Test Filters (with debug logging)</h2>
+        <select id="statusFilter">
+            <option value="">All Status</option>
+            <option value="want-to-read">Want to Read</option>
+            <option value="currently-reading">Currently Reading</option>
+            <option value="read">Read</option>
+            <option value="dnf">DNF</option>
+        </select>
+        
+        <select id="genreFilter">
+            <option value="">All Genres</option>
+            <option value="fae">Fae</option>
+            <option value="shifter">Shifter</option>
+            <option value="vampire">Vampire</option>
+            <option value="human">Human</option>
+            <option value="werewolf">Werewolf</option>
+            <option value="other">Other</option>
+        </select>
+
+        <select id="tropeFilter">
+            <option value="">All Tropes</option>
+            <option value="chosen-one">Chosen One</option>
+            <option value="love-triangle">Love Triangle</option>
+            <option value="enemies-to-lovers">Enemies to Lovers</option>
+            <option value="friends-to-lovers">Friends to Lovers</option>
+            <option value="slow-burn">Slow Burn</option>
+            <option value="found-family">Found Family</option>
+            <option value="forbidden-love">Forbidden Love</option>
+            <option value="redemption-arc">Redemption Arc</option>
+            <option value="morally-grey">Morally Grey</option>
+            <option value="fake-relationship">Fake Relationship</option>
+            <option value="second-chance">Second Chance</option>
+            <option value="why-choose">Why Choose</option>
+            <option value="other">Other</option>
+        </select>
+    </div>
+    
+    <div class="result" id="result">
+        <strong>Instructions:</strong><br>
+        1. Open browser console (F12)<br>
+        2. Change filter values above<br>
+        3. Check console for debug messages<br>
+        4. Compare with main app behavior
+    </div>
+
+    <script>
+        // Test the same checkAndBind approach
+        const checkAndBind = (id, event, handler) => {
+            const element = document.getElementById(id);
+            if (element) {
+                console.log(`✅ Binding ${event} event to ${id}`);
+                element.addEventListener(event, handler);
+            } else {
+                console.warn(`❌ Element with id '${id}' not found for event binding`);
+            }
+        };
+
+        // Test filter change events
+        function testFilters() {
+            console.log('🧪 Testing filter functionality...');
+            
+            checkAndBind('statusFilter', 'change', () => {
+                const value = document.getElementById('statusFilter').value;
+                console.log('📊 statusFilter changed to:', value);
+                updateResult('Status', value);
+            });
+            
+            checkAndBind('genreFilter', 'change', () => {
+                const value = document.getElementById('genreFilter').value;
+                console.log('🎭 genreFilter changed to:', value);
+                updateResult('Genre', value);
+            });
+            
+            checkAndBind('tropeFilter', 'change', () => {
+                const value = document.getElementById('tropeFilter').value;
+                console.log('💫 tropeFilter changed to:', value);
+                updateResult('Trope', value);
+            });
+        }
+
+        function updateResult(filterType, value) {
+            const result = document.getElementById('result');
+            const timestamp = new Date().toLocaleTimeString();
+            result.innerHTML += `<br><strong>[${timestamp}]</strong> ${filterType} filter: "${value || 'ALL'}"`;
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Filter test page loaded');
+            testFilters();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐛 Book Data Debug Tool</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f8fafc; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .header { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .debug-panel { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin: 20px 0; }
+        .debug-panel h3 { margin-top: 0; color: #1f2937; }
+        .status { padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .success { background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; }
+        .error { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+        .warning { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
+        .info { background: #dbeafe; color: #2563eb; border: 1px solid #bfdbfe; }
+        button { padding: 10px 15px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #2563eb; }
+        .console { background: #1e293b; color: #e2e8f0; padding: 15px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; margin: 15px 0; }
+        .book-list { max-height: 400px; overflow-y: auto; background: #f9fafb; padding: 15px; border-radius: 4px; }
+        .book-item { padding: 10px; margin: 5px 0; background: white; border-radius: 4px; border-left: 4px solid #3b82f6; }
+        .book-item small { color: #6b7280; display: block; margin-top: 5px; }
+        .data-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 15px 0; }
+        .data-card { background: #f3f4f6; padding: 15px; border-radius: 6px; text-align: center; }
+        .data-card .number { font-size: 24px; font-weight: bold; color: #1f2937; }
+        .data-card .label { color: #6b7280; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🐛 Book Data Debug Tool</h1>
+            <p>This tool analyzes the book data to understand why filtering shows 0 results.</p>
+            
+            <button onclick="debugBookData()">🔍 Debug Book Data</button>
+            <button onclick="testFilters()">🧪 Test Filters</button>
+            <button onclick="addTestData()">➕ Add Test Data</button>
+            <button onclick="clearData()">🗑️ Clear All Data</button>
+            <button onclick="openMainApp()">🌐 Open Main App</button>
+        </div>
+
+        <div class="debug-panel">
+            <h3>📊 Data Summary</h3>
+            <div class="data-summary" id="dataSummary">
+                <div class="data-card">
+                    <div class="number" id="totalBooks">-</div>
+                    <div class="label">Total Books</div>
+                </div>
+                <div class="data-card">
+                    <div class="number" id="localStorageBooks">-</div>
+                    <div class="label">localStorage Books</div>
+                </div>
+                <div class="data-card">
+                    <div class="number" id="filteredBooks">-</div>
+                    <div class="label">Filtered Books</div>
+                </div>
+                <div class="data-card">
+                    <div class="number" id="apiStatus">-</div>
+                    <div class="label">API Status</div>
+                </div>
+            </div>
+            <div id="debugStatus" class="status info">Click "Debug Book Data" to analyze...</div>
+        </div>
+
+        <div class="debug-panel">
+            <h3>📚 Book Collection</h3>
+            <div id="bookList" class="book-list">
+                No books analyzed yet...
+            </div>
+        </div>
+
+        <div class="debug-panel">
+            <h3>🖥️ Debug Console</h3>
+            <div id="console" class="console">
+                Debug console ready...<br>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function log(message) {
+            const console = document.getElementById('console');
+            const timestamp = new Date().toLocaleTimeString();
+            console.innerHTML += `<span style="color: #64748b;">[${timestamp}]</span> ${message}<br>`;
+            console.scrollTop = console.scrollHeight;
+            window.console.log(message);
+        }
+
+        function openMainApp() {
+            window.open('index.html', '_blank');
+            log('🌐 Opened main app in new tab');
+        }
+
+        function debugBookData() {
+            log('🔍 Starting book data analysis...');
+            
+            try {
+                // Check if bookTracker exists on main app
+                log('Checking for existing bookTracker instance...');
+                
+                // Check localStorage directly
+                const localStorageData = localStorage.getItem('bookTracker_books');
+                let localBooks = [];
+                
+                if (localStorageData) {
+                    try {
+                        localBooks = JSON.parse(localStorageData);
+                        log(`✅ Found ${localBooks.length} books in localStorage`);
+                    } catch (e) {
+                        log(`❌ Error parsing localStorage data: ${e.message}`);
+                    }
+                } else {
+                    log('⚠️ No books found in localStorage');
+                }
+
+                // Update summary
+                document.getElementById('totalBooks').textContent = localBooks.length;
+                document.getElementById('localStorageBooks').textContent = localBooks.length;
+                document.getElementById('filteredBooks').textContent = '-';
+                document.getElementById('apiStatus').textContent = 'Unknown';
+
+                // Display books
+                const bookList = document.getElementById('bookList');
+                if (localBooks.length === 0) {
+                    bookList.innerHTML = '<div class="status warning">No books found! This explains why filtering shows 0 results.</div>';
+                    
+                    document.getElementById('debugStatus').innerHTML = `
+                        <strong>🎯 Problem Identified!</strong><br>
+                        No books exist in the system. You need to:<br>
+                        <ul>
+                            <li>Add books to the collection first</li>
+                            <li>Or check if books failed to load from the API</li>
+                            <li>Or verify if initial data setup is working</li>
+                        </ul>
+                    `;
+                    document.getElementById('debugStatus').className = 'status error';
+                } else {
+                    bookList.innerHTML = localBooks.map((book, index) => `
+                        <div class="book-item">
+                            <strong>${book.title || 'Untitled'}</strong> by ${book.author || 'Unknown Author'}
+                            <small>
+                                Status: ${book.status || 'None'} | 
+                                Genre: ${book.mythicalElement || 'None'} | 
+                                Trope: ${book.trope || 'None'} |
+                                ID: ${book.id || 'None'}
+                            </small>
+                        </div>
+                    `).join('');
+                    
+                    document.getElementById('debugStatus').innerHTML = `
+                        <strong>✅ Books Found!</strong><br>
+                        Found ${localBooks.length} books in localStorage. If filtering still shows 0 results, 
+                        the issue might be in the filter logic or data structure mismatch.
+                    `;
+                    document.getElementById('debugStatus').className = 'status success';
+                }
+
+                // Try to access bookTracker from parent window if available
+                if (window.opener && window.opener.bookTracker) {
+                    const tracker = window.opener.bookTracker;
+                    log(`✅ Found bookTracker instance with ${tracker.books.length} books`);
+                    log(`Current filtered books: ${tracker.filteredBooks?.length || 0}`);
+                    
+                    document.getElementById('totalBooks').textContent = tracker.books.length;
+                    document.getElementById('filteredBooks').textContent = tracker.filteredBooks?.length || 0;
+                }
+
+                log('📊 Book data analysis complete');
+                
+            } catch (error) {
+                log(`❌ Error during book data analysis: ${error.message}`);
+                document.getElementById('debugStatus').innerHTML = `
+                    <strong>❌ Error!</strong><br>
+                    ${error.message}
+                `;
+                document.getElementById('debugStatus').className = 'status error';
+            }
+        }
+
+        function testFilters() {
+            log('🧪 Testing filter functionality...');
+            
+            const localStorageData = localStorage.getItem('bookTracker_books');
+            if (!localStorageData) {
+                log('❌ No books to filter - add some books first');
+                return;
+            }
+
+            const books = JSON.parse(localStorageData);
+            
+            // Test different filter scenarios
+            const testCases = [
+                { name: 'No filters', status: '', genre: '', trope: '' },
+                { name: 'Status: read', status: 'read', genre: '', trope: '' },
+                { name: 'Genre: fae', status: '', genre: 'fae', trope: '' },
+                { name: 'Trope: enemies-to-lovers', status: '', genre: '', trope: 'enemies-to-lovers' }
+            ];
+
+            testCases.forEach(testCase => {
+                const filtered = books.filter(book => {
+                    const statusMatch = !testCase.status || book.status === testCase.status;
+                    const genreMatch = !testCase.genre || book.mythicalElement === testCase.genre;
+                    const tropeMatch = !testCase.trope || book.trope === testCase.trope;
+                    return statusMatch && genreMatch && tropeMatch;
+                });
+                
+                log(`${testCase.name}: ${filtered.length} matches`);
+                
+                if (filtered.length > 0) {
+                    filtered.slice(0, 2).forEach(book => {
+                        log(`  - "${book.title}" (${book.status}, ${book.mythicalElement}, ${book.trope})`);
+                    });
+                }
+            });
+        }
+
+        function addTestData() {
+            log('➕ Adding test book data...');
+            
+            const testBooks = [
+                {
+                    id: 'test-1',
+                    title: 'Shadow and Bone',
+                    author: 'Leigh Bardugo',
+                    status: 'read',
+                    mythicalElement: 'fae',
+                    trope: 'chosen-one',
+                    rating: 4,
+                    dateAdded: new Date().toISOString()
+                },
+                {
+                    id: 'test-2',
+                    title: 'Fourth Wing',
+                    author: 'Rebecca Yarros',
+                    status: 'currently-reading',
+                    mythicalElement: 'vampire',
+                    trope: 'enemies-to-lovers',
+                    rating: 5,
+                    dateAdded: new Date().toISOString()
+                },
+                {
+                    id: 'test-3',
+                    title: 'The Seven Husbands of Evelyn Hugo',
+                    author: 'Taylor Jenkins Reid',
+                    status: 'want-to-read',
+                    mythicalElement: 'human',
+                    trope: 'found-family',
+                    rating: 0,
+                    dateAdded: new Date().toISOString()
+                }
+            ];
+
+            try {
+                localStorage.setItem('bookTracker_books', JSON.stringify(testBooks));
+                log(`✅ Added ${testBooks.length} test books to localStorage`);
+                
+                // Update bookTracker if available
+                if (window.opener && window.opener.bookTracker) {
+                    window.opener.bookTracker.books = testBooks;
+                    window.opener.bookTracker.renderBooks();
+                    window.opener.bookTracker.updateStats();
+                    log('✅ Updated main app bookTracker instance');
+                }
+                
+                // Refresh our analysis
+                debugBookData();
+                
+            } catch (error) {
+                log(`❌ Error adding test data: ${error.message}`);
+            }
+        }
+
+        function clearData() {
+            log('🗑️ Clearing all book data...');
+            
+            try {
+                localStorage.removeItem('bookTracker_books');
+                log('✅ Cleared localStorage book data');
+                
+                // Clear bookTracker if available
+                if (window.opener && window.opener.bookTracker) {
+                    window.opener.bookTracker.books = [];
+                    window.opener.bookTracker.renderBooks();
+                    window.opener.bookTracker.updateStats();
+                    log('✅ Cleared main app bookTracker instance');
+                }
+                
+                // Refresh our analysis
+                debugBookData();
+                
+            } catch (error) {
+                log(`❌ Error clearing data: ${error.message}`);
+            }
+        }
+
+        // Auto-run analysis on load
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🚀 Book Data Debug Tool loaded');
+            debugBookData();
+        });
+    </script>
+</body>
+</html>
