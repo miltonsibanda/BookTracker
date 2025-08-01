@@ -109,7 +109,7 @@ def csv_to_json(csv_path, output_path):
                 book = {
                     'id': generate_id(),
                     'title': clean_value(row[5]) or 'Unknown Title',  # Title
-                    'author': clean_value(row[2]) or 'Unknown Author',  # Author
+                    'author': clean_value(row[2]),  # Author
                     'series': clean_value(row[3]) or '',  # Series Title
                     'bookNumber': parse_number(row[4]),  # #In Series
                     'status': determine_status(row[0], row[1]),  # Read, DNF
@@ -151,7 +151,7 @@ def csv_to_json(csv_path, output_path):
         raise
 
 def main():
-    csv_path = '/Users/crazybuy/Downloads/Copy of Booklist - Sheet1.csv'
+    csv_path = '/Users/crazybuy/Book Website/books.csv'
     output_path = '/Users/crazybuy/Book Website/imported-books.json'
     
     try:
