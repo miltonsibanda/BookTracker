@@ -237,35 +237,9 @@ class BookTracker {
 
     // Setup initial data (only if no books exist)
     setupInitialData() {
+        // Start with empty library - no demo data
         if (this.books.length === 0) {
-            const initialBooks = [
-                {
-                    id: this.generateId(),
-                    title: "Blood and Steel",
-                    author: "Unknown Author",
-                    series: "",
-                    bookNumber: null,
-                    status: "read",
-                    rating: 4,
-                    mythicalElement: "fae",
-                    publisher: "",
-                    pageCount: null,
-                    coverImage: "",
-                    edition: "",
-                    digitallySigned: false,
-                    signed: false,
-                    sprayedEdges: false,
-                    hiddenCover: false,
-                    reversibleDustJacket: false,
-                    startedReading: "2024-01-15",
-                    finishedReading: "2024-01-22",
-                    gifted: false,
-                    notes: "Amazing start to the series!",
-                    dateAdded: new Date().toISOString()
-                }
-            ];
-            
-            this.books = initialBooks;
+            this.books = [];
             this.saveBooksToStorage();
             this.renderBooks();
             this.updateStats();
