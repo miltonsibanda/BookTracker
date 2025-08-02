@@ -11,7 +11,7 @@
     <meta http-equiv="Expires" content="0">
     
     <!-- CSS with cache busting timestamp -->
-    <link rel="stylesheet" href="styles.css?v=20250802202831">
+    <link rel="stylesheet" href="styles.css?v=20250802190552">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -430,6 +430,6 @@
     <input type="file" id="fileInput" accept=".json" style="display: none;">
 
     <!-- JavaScript with cache busting timestamp -->
-    <script src="script.js?v=20250802202831"></script>
+    <script src="script.js?v=20250802190552"></script>
 </body>
 </html>

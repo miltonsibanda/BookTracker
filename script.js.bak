@@ -1,6 +1,21 @@
 // Simple testBookTracker definition at the very top
 console.log('🚀 Defining testBookTracker immediately...');
 
+// Cache busting helper
+window.CACHE_VERSION = '20250802190552';
+console.log('📦 Cache version:', window.CACHE_VERSION);
+
+// Force reload if cache version changes
+const STORAGE_KEY = 'booktracker_cache_version';
+const storedVersion = localStorage.getItem(STORAGE_KEY);
+if (storedVersion && storedVersion !== window.CACHE_VERSION) {
+    console.log('🔄 Cache version mismatch, clearing cache...');
+    localStorage.clear();
+    sessionStorage.clear();
+    location.reload(true);
+}
+localStorage.setItem(STORAGE_KEY, window.CACHE_VERSION);
+
 window.testBookTrackerSimple = {
     test: () => console.log('testBookTrackerSimple works!'),
     openModal: () => {
@@ -40,15 +55,20 @@ class BookTrackerAPI {
 
     getApiUrl() {
         // Check if we're running in a Docker environment
-        // by trying to detect the hostname or environment
         const hostname = window.location.hostname;
+        const port = window.location.port;
         
-        // If accessing via Docker (not localhost), use the internal Docker service name
+        // If accessing via Docker frontend (port 8081), use nginx proxy
+        if (port === '8081') {
+            return '/api'; // Use relative URL, nginx will proxy to backend
+        }
+        
+        // If accessing via non-localhost hostname, use relative proxy
         if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
             return '/api'; // Use relative URL, nginx will proxy to backend
         }
         
-        // Default for local development
+        // Default for local development (direct access)
         return 'http://localhost:3001/api';
     }
 
@@ -139,16 +159,57 @@ class BookTracker {
         this.init();
     }
 
+    async testApiConnection() {
+        try {
+            const health = await this.api.request('/health');
+            console.log('API Health Check:', health);
+            return health.status === 'ok';
+        } catch (error) {
+            console.warn('API connection test failed:', error);
+            return false;
+        }
+    }
+
+    updateConnectionStatus(status, message) {
+        const indicator = document.getElementById('connectionIndicator');
+        const text = document.getElementById('connectionText');
+        
+        if (indicator && text) {
+            // Remove existing status classes
+            indicator.classList.remove('connected', 'disconnected', 'connecting');
+            
+            // Add new status class
+            indicator.classList.add(status);
+            text.textContent = message;
+            
+            console.log(`Connection status: ${status} - ${message}`);
+        }
+    }
+
     async init() {
         try {
             console.log('BookTracker initialization started...');
+            
+            // Show connecting status
+            this.updateConnectionStatus('connecting', 'Connecting to database...');
+            
+            // Test API connection first
+            const apiConnected = await this.testApiConnection();
+            
+            if (apiConnected) {
+                this.updateConnectionStatus('connected', 'Connected to database');
+            } else {
+                this.updateConnectionStatus('disconnected', 'Using local storage only');
+            }
             
             // Load books from both local storage and server
             await this.loadBooksFromStorage();
             console.log('Books loaded from storage:', this.books.length);
             
-            await this.syncWithServer();
-            console.log('Server sync completed');
+            if (apiConnected) {
+                await this.syncWithServer();
+                console.log('Server sync completed');
+            }
             
             this.bindEvents();
             console.log('Events bound successfully');
@@ -161,6 +222,17 @@ class BookTracker {
             
             this.setupAutocomplete();
             console.log('Autocomplete setup completed');
+            
+            // Ensure we start in grid view
+            this.currentView = 'grid';
+            const gridBtn = document.getElementById('gridView');
+            const listBtn = document.getElementById('listView');
+            if (gridBtn) gridBtn.classList.add('active');
+            if (listBtn) listBtn.classList.remove('active');
+            console.log('View set to grid mode');
+            
+            // Force grid layout initialization
+            this.forceGridLayout();
             
             this.renderBooks();
             console.log('Books rendered');
@@ -180,35 +252,9 @@ class BookTracker {
 
     // Setup initial data (only if no books exist)
     setupInitialData() {
+        // Start with empty library - no demo data
         if (this.books.length === 0) {
-            const initialBooks = [
-                {
-                    id: this.generateId(),
-                    title: "Blood and Steel",
-                    author: "Unknown Author",
-                    series: "",
-                    bookNumber: null,
-                    status: "read",
-                    rating: 4,
-                    mythicalElement: "fae",
-                    publisher: "",
-                    pageCount: null,
-                    coverImage: "",
-                    edition: "",
-                    digitallySigned: false,
-                    signed: false,
-                    sprayedEdges: false,
-                    hiddenCover: false,
-                    reversibleDustJacket: false,
-                    startedReading: "2024-01-15",
-                    finishedReading: "2024-01-22",
-                    gifted: false,
-                    notes: "Amazing start to the series!",
-                    dateAdded: new Date().toISOString()
-                }
-            ];
-            
-            this.books = initialBooks;
+            this.books = [];
             this.saveBooksToStorage();
             this.renderBooks();
             this.updateStats();
@@ -221,6 +267,7 @@ class BookTracker {
         const checkAndBind = (id, event, handler) => {
             const element = document.getElementById(id);
             if (element) {
+                console.log(`✅ Successfully bound ${event} event to element: ${id}`);
                 element.addEventListener(event, handler);
             } else {
                 console.warn(`Element with id '${id}' not found for event binding`);
@@ -254,9 +301,10 @@ class BookTracker {
         // Search and filters
         checkAndBind('searchInput', 'input', () => this.handleSearch());
         checkAndBind('clearSearch', 'click', () => this.clearSearch());
-        checkAndBind('statusFilter', 'change', () => this.applyFilters());
-        checkAndBind('genreFilter', 'change', () => this.applyFilters());
-        checkAndBind('sortBy', 'change', () => this.applySorting());
+        checkAndBind('statusFilter', 'change', () => this.renderBooks());
+        checkAndBind('tropeFilter', 'change', () => this.renderBooks());
+        checkAndBind('genreFilter', 'change', () => this.renderBooks());
+        checkAndBind('sortBy', 'change', () => this.renderBooks());
 
         // View toggle
         checkAndBind('gridView', 'click', () => this.toggleView('grid'));
@@ -283,6 +331,13 @@ class BookTracker {
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => this.handleKeyboardShortcuts(e));
+        
+        // Window resize for responsive grid
+        window.addEventListener('resize', () => {
+            if (this.currentView === 'grid') {
+                this.forceGridLayout();
+            }
+        });
         
         console.log('Event binding completed successfully');
     }
@@ -644,13 +699,32 @@ class BookTracker {
     // Enhanced Storage operations with API sync
     async saveBooksToStorage() {
         try {
-            // Save to localStorage first (immediate)
+            // Always save to localStorage first for immediate backup
             localStorage.setItem('bookTracker_books', JSON.stringify(this.books));
+            console.log('Books saved to localStorage');
             
-            // Sync with server if online (in background)
-            if (this.api.isOnline && !this.syncInProgress) {
-                this.syncWithServer();
+            // Try to sync with server if online
+            if (this.api.isOnline) {
+                try {
+                    const apiConnected = await this.testApiConnection();
+                    if (apiConnected && !this.syncInProgress) {
+                        console.log('Syncing with server...');
+                        await this.syncWithServer();
+                    }
+                } catch (error) {
+                    console.error('Server sync failed:', error);
+                }
             }
+        } catch (error) {
+            console.error('Error saving books:', error);
+        }
+    }
+
+    // Save to localStorage only (no sync)
+    async saveBooksToStorageOnly() {
+        try {
+            localStorage.setItem('bookTracker_books', JSON.stringify(this.books));
+            console.log('Books saved to localStorage (no sync)');
         } catch (error) {
             console.error('Error saving books to localStorage:', error);
         }
@@ -658,12 +732,37 @@ class BookTracker {
 
     async loadBooksFromStorage() {
         try {
+            // First try to load from API if connected
+            const apiConnected = await this.testApiConnection();
+            
+            if (apiConnected) {
+                console.log('Loading books from API server...');
+                try {
+                    const serverBooks = await this.api.getBooks();
+                    if (serverBooks && serverBooks.length > 0) {
+                        this.books = serverBooks;
+                        // Save to localStorage as backup
+                        localStorage.setItem('bookTracker_books', JSON.stringify(this.books));
+                        console.log(`Loaded ${this.books.length} books from server`);
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Failed to load from API:', error);
+                }
+            }
+            
+            // Fallback to localStorage if API fails or no data
+            console.log('Loading books from localStorage...');
             const stored = localStorage.getItem('bookTracker_books');
             if (stored) {
                 this.books = JSON.parse(stored);
+                console.log(`Loaded ${this.books.length} books from localStorage`);
+            } else {
+                console.log('No books found in localStorage');
+                this.books = [];
             }
         } catch (error) {
-            console.error('Error loading books from localStorage:', error);
+            console.error('Error loading books:', error);
             this.books = [];
         }
     }
@@ -671,32 +770,67 @@ class BookTracker {
     async syncWithServer() {
         if (this.syncInProgress || !this.api.isOnline) return;
         
+        console.log(`[SYNC] Starting server sync`);
         this.syncInProgress = true;
         
         try {
             // Get books from server
             const serverBooks = await this.api.getBooks();
+            console.log(`[SYNC] Retrieved ${serverBooks.length} books from server`);
             
-            // Simple merge strategy: server wins for conflicts
+            // Improved merge strategy: preserve recent local changes
             if (serverBooks.length > 0) {
-                // Merge local and server books
                 const localBooksMap = new Map(this.books.map(book => [book.id, book]));
                 const serverBooksMap = new Map(serverBooks.map(book => [book.id, book]));
                 
-                // Start with server books (they take precedence)
-                const mergedBooks = [...serverBooks];
+                const mergedBooks = [];
+                
+                // First, add all server books, but check for newer local versions
+                serverBooks.forEach(serverBook => {
+                    const localBook = localBooksMap.get(serverBook.id);
+                    if (localBook) {
+                        // Compare modification dates - use newer version
+                        const serverModified = new Date(serverBook.dateModified || serverBook.dateAdded || 0);
+                        const localModified = new Date(localBook.dateModified || localBook.dateAdded || 0);
+                        
+                        console.log(`[SYNC] Comparing book "${localBook.title}":`, {
+                            serverModified: serverModified.toISOString(),
+                            localModified: localModified.toISOString(),
+                            serverCover: serverBook.coverImage,
+                            localCover: localBook.coverImage
+                        });
+                        
+                        if (localModified > serverModified) {
+                            console.log(`[SYNC] Using local version of "${localBook.title}" (newer)`);
+                            console.log(`[SYNC] Local cover image preserved:`, localBook.coverImage);
+                            mergedBooks.push(localBook);
+                            // Update server with local changes
+                            this.api.updateBook(localBook.id, localBook).catch(err => 
+                                console.error('Failed to sync local changes to server:', err)
+                            );
+                        } else {
+                            console.log(`[SYNC] Using server version of "${serverBook.title}" (newer or equal)`);
+                            console.log(`[SYNC] Server cover image used:`, serverBook.coverImage);
+                            mergedBooks.push(serverBook);
+                        }
+                    } else {
+                        mergedBooks.push(serverBook);
+                    }
+                });
                 
                 // Add local books that don't exist on server
                 this.books.forEach(localBook => {
                     if (!serverBooksMap.has(localBook.id)) {
+                        console.log(`[SYNC] Adding local-only book to merge:`, localBook.title);
                         mergedBooks.push(localBook);
-                        // Also send this book to server
+                        // Send new local book to server
                         this.api.createBook(localBook).catch(err => 
                             console.error('Failed to sync local book to server:', err)
                         );
                     }
                 });
                 
+                console.log(`[SYNC] Final merged books count:`, mergedBooks.length);
                 this.books = mergedBooks;
                 localStorage.setItem('bookTracker_books', JSON.stringify(this.books));
                 
@@ -868,6 +1002,7 @@ class BookTracker {
             'bookCover': book.coverImage,
             'readingStatus': book.status,
             'mythicalElement': book.mythicalElement,
+            'trope': book.trope,
             'bookEdition': book.edition,
             'bookNotes': book.notes,
             'startedReading': book.startedReading,
@@ -901,9 +1036,18 @@ class BookTracker {
     }
 
     async handleFormSubmit(e) {
+        console.log('🚨 FORM SUBMIT TRIGGERED - START OF METHOD');
         e.preventDefault();
         
         const formData = new FormData(e.target);
+        
+        // Log form data for debugging
+        console.log('🔍 Form submission debug:');
+        console.log('  📋 All form data:');
+        for (let [key, value] of formData.entries()) {
+            console.log(`    ${key}: "${value}"`);
+        }
+        
         const bookData = {
             title: formData.get('title') || '',
             author: formData.get('author') || '',
@@ -912,6 +1056,7 @@ class BookTracker {
             status: formData.get('status') || 'want-to-read',
             rating: this.getCurrentRating(),
             mythicalElement: formData.get('mythicalElement') || '',
+            trope: formData.get('trope') || '',
             publisher: formData.get('publisher') || '',
             pageCount: formData.get('pageCount') ? parseInt(formData.get('pageCount')) : null,
             coverImage: formData.get('coverImage') || '',
@@ -926,6 +1071,11 @@ class BookTracker {
             gifted: formData.has('gifted'),
             notes: formData.get('notes') || ''
         };
+
+        console.log('📦 Processed book data:');
+        console.log('  🖼️ Cover Image:', bookData.coverImage);
+        console.log('  📖 Title:', bookData.title);
+        console.log('  🆔 Edit ID:', this.currentEditId);
 
         try {
             if (this.currentEditId) {
@@ -967,15 +1117,41 @@ class BookTracker {
     }
 
     async updateBook(id, bookData) {
+        console.log(`[UPDATE_BOOK] Starting update for book ID: ${id}`);
+        console.log(`[UPDATE_BOOK] Input bookData:`, bookData);
+        console.log(`[UPDATE_BOOK] Cover image in input:`, bookData.coverImage);
+        
         const index = this.books.findIndex(book => book.id === id);
         if (index !== -1) {
-            this.books[index] = { ...this.books[index], ...bookData };
-            await this.saveBooksToStorage();
+            console.log(`[UPDATE_BOOK] Found book at index ${index}:`, this.books[index]);
+            console.log(`[UPDATE_BOOK] Current cover image:`, this.books[index].coverImage);
+            
+            // Add modification timestamp
+            const updatedBook = { 
+                ...this.books[index], 
+                ...bookData, 
+                dateModified: new Date().toISOString() 
+            };
+            
+            console.log(`[UPDATE_BOOK] Updated book after merge:`, updatedBook);
+            console.log(`[UPDATE_BOOK] Cover image after merge:`, updatedBook.coverImage);
+            
+            this.books[index] = updatedBook;
+            
+            console.log(`[UPDATE_BOOK] Book in array after assignment:`, this.books[index]);
+            console.log(`[UPDATE_BOOK] Cover image in array:`, this.books[index].coverImage);
+            
+            // Save to localStorage first
+            await this.saveBooksToStorageOnly();
             
             // Sync with server
             try {
                 if (this.api.isOnline) {
-                    await this.api.updateBook(id, this.books[index]);
+                    console.log(`[UPDATE_BOOK] Syncing to server:`, updatedBook);
+                    console.log(`[UPDATE_BOOK] Cover image being sent to server:`, updatedBook.coverImage);
+                    
+                    await this.api.updateBook(id, updatedBook);
+                    console.log(`Successfully synced book "${updatedBook.title}" to server`);
                 }
             } catch (error) {
                 console.error('Failed to sync updated book with server:', error);
@@ -1081,7 +1257,7 @@ class BookTracker {
 
     getCurrentRating() {
         const hiddenInput = document.getElementById('bookRating');
-        return hiddenInput ? parseInt(hiddenInput.value) || 0 : 0;
+        return hiddenInput ? parseFloat(hiddenInput.value) || 0 : 0;
     }
 
     setRating(rating) {
@@ -1129,14 +1305,20 @@ class BookTracker {
 
     // Enhanced render functions
     renderBooks() {
+        console.log('renderBooks called, currentView:', this.currentView);
         const container = document.getElementById('booksContainer');
         const emptyState = document.getElementById('emptyState');
         
-        if (!container || !emptyState) return;
+        if (!container || !emptyState) {
+            console.error('Container or empty state element not found');
+            return;
+        }
 
         // Apply current filters and sorting
         this.applyFilters();
         this.applySorting();
+
+        console.log('Filtered books count:', this.filteredBooks.length);
 
         if (this.filteredBooks.length === 0) {
             container.style.display = 'none';
@@ -1148,14 +1330,23 @@ class BookTracker {
         emptyState.style.display = 'none';
 
         if (this.currentView === 'grid') {
+            console.log('Rendering grid view');
             this.renderGridView(container);
         } else {
+            console.log('Rendering list view');
             this.renderListView(container);
         }
+        
+        console.log('Final container className:', container.className);
     }
 
     renderGridView(container) {
+        console.log('Rendering grid view...');
         container.className = 'books-container';
+        
+        // Force responsive grid properties
+        this.applyResponsiveGrid(container);
+        
         container.innerHTML = this.filteredBooks.map(book => {
             const physicalFeatures = this.getPhysicalFeatures(book);
             const specialEdition = this.isSpecialEdition(book);
@@ -1163,12 +1354,19 @@ class BookTracker {
             return `
             <div class="book-card" data-id="${book.id}">
                 <div class="book-card__header">
-                    <div class="book-card__cover">
-                        ${book.coverImage ? 
-                            `<img src="${book.coverImage}" alt="${this.escapeHtml(book.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                             <div class="book-card__no-cover" style="display: none;"><i class="fas fa-book"></i></div>` :
-                            `<div class="book-card__no-cover"><i class="fas fa-book"></i></div>`
-                        }
+                    <div class="book-card__info">
+                        <div class="book-card__cover">
+                            ${book.coverImage ? 
+                                `<img src="${book.coverImage}" alt="${this.escapeHtml(book.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                                 <div class="book-card__no-cover" style="display: none;"><i class="fas fa-book"></i></div>` :
+                                `<div class="book-card__no-cover"><i class="fas fa-book"></i></div>`
+                            }
+                        </div>
+                        <div class="book-card__details">
+                            <h3 class="book-card__title ${specialEdition ? 'book-card__special-edition' : ''}">${this.escapeHtml(book.title)}</h3>
+                            <p class="book-card__author">by ${this.escapeHtml(book.author)}</p>
+                            ${book.series ? `<p class="book-card__series"><i class="fas fa-layer-group"></i>${this.escapeHtml(book.series)}${book.bookNumber ? ` #${book.bookNumber}` : ''}</p>` : ''}
+                        </div>
                     </div>
                     <div class="book-card__actions">
                         <button class="btn btn--small btn--primary" onclick="bookTracker.openModal(bookTracker.books.find(b => b.id === '${book.id}'))">
@@ -1179,18 +1377,39 @@ class BookTracker {
                         </button>
                     </div>
                 </div>
-                <div class="book-card__content">
-                    <h3 class="book-card__title ${specialEdition ? 'book-card__special-edition' : ''}">${this.escapeHtml(book.title)}</h3>
-                    <p class="book-card__author">by ${this.escapeHtml(book.author)}</p>
-                    ${book.series ? `<p class="book-card__series">${this.escapeHtml(book.series)}${book.bookNumber ? ` #${book.bookNumber}` : ''}</p>` : ''}
-                    <div class="book-card__rating">
-                        ${this.renderStarRating(book.rating)}
+                <div class="book-card__body">
+                    <div class="book-card__meta">
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Rating</span>
+                            <div class="book-card__meta-value">
+                                ${this.renderStarRating(book.rating)}
+                            </div>
+                        </div>
+                        ${book.mythicalElement ? `
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Genre</span>
+                            <span class="book-card__meta-value">${this.escapeHtml(book.mythicalElement)}</span>
+                        </div>
+                        ` : ''}
+                        ${book.trope ? `
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Trope</span>
+                            <span class="book-card__meta-value">${this.escapeHtml(book.trope)}</span>
+                        </div>
+                        ` : ''}
+                        ${book.pageCount ? `
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Pages</span>
+                            <span class="book-card__meta-value">${book.pageCount}</span>
+                        </div>
+                        ` : ''}
+                        ${book.publisher ? `
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Publisher</span>
+                            <span class="book-card__meta-value">${this.escapeHtml(book.publisher)}</span>
+                        </div>
+                        ` : ''}
                     </div>
-                    <div class="book-card__status status--${book.status}">
-                        ${this.getStatusLabel(book.status)}
-                    </div>
-                    ${book.mythicalElement ? `<div class="book-card__genre">${this.escapeHtml(book.mythicalElement)}</div>` : ''}
-                    ${book.gifted ? `<div class="book-card__gifted"><i class="fas fa-gift"></i> Gift</div>` : ''}
                     ${physicalFeatures.length > 0 ? `
                         <div class="book-card__physical-features">
                             ${physicalFeatures.map(feature => `
@@ -1201,6 +1420,12 @@ class BookTracker {
                             `).join('')}
                         </div>
                     ` : ''}
+                </div>
+                <div class="book-card__footer">
+                    <div class="book-card__status status--${book.status}">
+                        ${this.getStatusLabel(book.status)}
+                    </div>
+                    ${book.gifted ? `<div class="book-card__gifted"><i class="fas fa-gift"></i> Gift</div>` : ''}
                 </div>
             </div>
         `;
@@ -1208,7 +1433,14 @@ class BookTracker {
     }
 
     renderListView(container) {
+        console.log('Rendering list view...');
         container.className = 'books-container list-view';
+        
+        // Force list properties
+        container.style.display = 'grid';
+        container.style.gridTemplateColumns = '1fr';
+        container.style.gap = '1rem';
+        
         container.innerHTML = this.filteredBooks.map(book => {
             const physicalFeatures = this.getPhysicalFeatures(book);
             const specialEdition = this.isSpecialEdition(book);
@@ -1216,12 +1448,19 @@ class BookTracker {
             return `
             <div class="book-card" data-id="${book.id}">
                 <div class="book-card__header">
-                    <div class="book-card__cover">
-                        ${book.coverImage ? 
-                            `<img src="${book.coverImage}" alt="${this.escapeHtml(book.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                             <div class="book-card__no-cover" style="display: none;"><i class="fas fa-book"></i></div>` :
-                            `<div class="book-card__no-cover"><i class="fas fa-book"></i></div>`
-                        }
+                    <div class="book-card__info">
+                        <div class="book-card__cover">
+                            ${book.coverImage ? 
+                                `<img src="${book.coverImage}" alt="${this.escapeHtml(book.title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                                 <div class="book-card__no-cover" style="display: none;"><i class="fas fa-book"></i></div>` :
+                                `<div class="book-card__no-cover"><i class="fas fa-book"></i></div>`
+                            }
+                        </div>
+                        <div class="book-card__details">
+                            <h3 class="book-card__title ${specialEdition ? 'book-card__special-edition' : ''}">${this.escapeHtml(book.title)}</h3>
+                            <p class="book-card__author">by ${this.escapeHtml(book.author)}</p>
+                            ${book.series ? `<p class="book-card__series"><i class="fas fa-layer-group"></i>${this.escapeHtml(book.series)}${book.bookNumber ? ` #${book.bookNumber}` : ''}</p>` : ''}
+                        </div>
                     </div>
                     <div class="book-card__actions">
                         <button class="btn btn--small btn--primary" onclick="bookTracker.openModal(bookTracker.books.find(b => b.id === '${book.id}'))">
@@ -1232,19 +1471,53 @@ class BookTracker {
                         </button>
                     </div>
                 </div>
-                <div class="book-card__content">
-                    <h3 class="book-card__title ${specialEdition ? 'book-card__special-edition' : ''}">${this.escapeHtml(book.title)}</h3>
-                    <p class="book-card__author">by ${this.escapeHtml(book.author)}</p>
-                    ${book.series ? `<p class="book-card__series">${this.escapeHtml(book.series)}${book.bookNumber ? ` #${book.bookNumber}` : ''}</p>` : ''}
-                    <div class="book-card__rating">
-                        ${this.renderStarRating(book.rating)}
+                <div class="book-card__body">
+                    <div class="book-card__meta">
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Rating</span>
+                            <div class="book-card__meta-value">
+                                ${this.renderStarRating(book.rating)}
+                            </div>
+                        </div>
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Status</span>
+                            <div class="book-card__meta-value">
+                                <span class="book-card__status status--${book.status}">
+                                    ${this.getStatusLabel(book.status)}
+                                </span>
+                            </div>
+                        </div>
+                        ${book.mythicalElement ? `
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Genre</span>
+                            <span class="book-card__meta-value">${this.escapeHtml(book.mythicalElement)}</span>
+                        </div>
+                        ` : ''}
+                        ${book.trope ? `
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Trope</span>
+                            <span class="book-card__meta-value">${this.escapeHtml(book.trope)}</span>
+                        </div>
+                        ` : ''}
+                        ${book.pageCount ? `
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Pages</span>
+                            <span class="book-card__meta-value">${book.pageCount}</span>
+                        </div>
+                        ` : ''}
+                        ${book.publisher ? `
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Publisher</span>
+                            <span class="book-card__meta-value">${this.escapeHtml(book.publisher)}</span>
+                        </div>
+                        ` : ''}
+                        ${book.finishedReading ? `
+                        <div class="book-card__meta-item">
+                            <span class="book-card__meta-label">Read Date</span>
+                            <span class="book-card__meta-value">${new Date(book.finishedReading).toLocaleDateString()}</span>
+                        </div>
+                        ` : ''}
                     </div>
-                    <div class="book-card__status status--${book.status}">
-                        ${this.getStatusLabel(book.status)}
-                    </div>
-                    ${book.mythicalElement ? `<div class="book-card__genre">${this.escapeHtml(book.mythicalElement)}</div>` : ''}
-                    ${book.pageCount ? `<div class="book-card__pages">${book.pageCount} pages</div>` : ''}
-                    ${book.gifted ? `<div class="book-card__gifted"><i class="fas fa-gift"></i> Gift</div>` : ''}
                     ${physicalFeatures.length > 0 ? `
                         <div class="book-card__physical-features">
                             ${physicalFeatures.map(feature => `
@@ -1255,6 +1528,10 @@ class BookTracker {
                             `).join('')}
                         </div>
                     ` : ''}
+                </div>
+                <div class="book-card__footer">
+                    ${book.gifted ? `<div class="book-card__gifted"><i class="fas fa-gift"></i> Gift</div>` : ''}
+                    ${book.notes ? `<div class="book-card__notes"><i class="fas fa-sticky-note"></i> Has notes</div>` : ''}
                 </div>
             </div>
         `;
@@ -1341,22 +1618,6 @@ class BookTracker {
 
     // Search and filter functions
     handleSearch() {
-        const searchInput = document.getElementById('searchInput');
-        if (!searchInput) return;
-        
-        const query = searchInput.value.toLowerCase().trim();
-        
-        if (query) {
-            this.filteredBooks = this.books.filter(book =>
-                book.title.toLowerCase().includes(query) ||
-                book.author.toLowerCase().includes(query) ||
-                book.series?.toLowerCase().includes(query) ||
-                book.publisher?.toLowerCase().includes(query)
-            );
-        } else {
-            this.filteredBooks = [...this.books];
-        }
-        
         this.renderBooks();
     }
 
@@ -1369,13 +1630,28 @@ class BookTracker {
     }
 
     applyFilters() {
+        const searchInput = document.getElementById('searchInput');
         const statusFilter = document.getElementById('statusFilter')?.value;
         const genreFilter = document.getElementById('genreFilter')?.value;
+        const tropeFilter = document.getElementById('tropeFilter')?.value;
+        
+        const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
         
         this.filteredBooks = this.books.filter(book => {
+            // Search match
+            const searchMatch = !query || (
+                book.title.toLowerCase().includes(query) ||
+                book.author.toLowerCase().includes(query) ||
+                book.series?.toLowerCase().includes(query) ||
+                book.publisher?.toLowerCase().includes(query)
+            );
+            
+            // Filter matches
             const statusMatch = !statusFilter || book.status === statusFilter;
             const genreMatch = !genreFilter || book.mythicalElement === genreFilter;
-            return statusMatch && genreMatch;
+            const tropeMatch = !tropeFilter || book.trope === tropeFilter;
+            
+            return searchMatch && statusMatch && genreMatch && tropeMatch;
         });
     }
 
@@ -1409,17 +1685,61 @@ class BookTracker {
     }
 
     toggleView(view) {
+        console.log('toggleView called with:', view);
         this.currentView = view;
         
         const gridBtn = document.getElementById('gridView');
         const listBtn = document.getElementById('listView');
+        const container = document.getElementById('booksContainer');
         
         if (gridBtn && listBtn) {
             gridBtn.classList.toggle('active', view === 'grid');
             listBtn.classList.toggle('active', view === 'list');
+            console.log('Button states updated:', {
+                gridActive: gridBtn.classList.contains('active'),
+                listActive: listBtn.classList.contains('active')
+            });
+        }
+        
+        if (container) {
+            console.log('Container class before:', container.className);
+            console.log('Current view:', this.currentView);
         }
         
         this.renderBooks();
+        
+        if (container) {
+            console.log('Container class after:', container.className);
+        }
+    }
+
+    // Force grid layout to ensure proper styling
+    forceGridLayout() {
+        const container = document.getElementById('booksContainer');
+        if (container) {
+            console.log('🔧 Forcing grid layout...');
+            container.className = 'books-container';
+            this.applyResponsiveGrid(container);
+            console.log('✅ Grid layout forced with responsive columns');
+        }
+    }
+
+    // Apply responsive grid properties
+    applyResponsiveGrid(container) {
+        container.style.display = 'grid';
+        
+        // Set responsive grid columns based on screen size
+        const width = window.innerWidth;
+        if (width >= 1025) {
+            container.style.gridTemplateColumns = 'repeat(3, 1fr)';
+            container.style.gap = '1.5rem';
+        } else if (width >= 769) {
+            container.style.gridTemplateColumns = 'repeat(2, 1fr)';
+            container.style.gap = '1rem';
+        } else {
+            container.style.gridTemplateColumns = '1fr';
+            container.style.gap = '1rem';
+        }
     }
 
     // Import/Export functions
@@ -1671,6 +1991,54 @@ try {
                 }
             } else {
                 console.error('BookTracker not initialized');
+            }
+        },
+        
+        testGrid: () => {
+            console.log('🧪 Manual Grid Test');
+            if (window.bookTracker) {
+                console.log('Current view:', window.bookTracker.currentView);
+                console.log('Books count:', window.bookTracker.books.length);
+                
+                // Force grid view
+                window.bookTracker.currentView = 'grid';
+                window.bookTracker.renderBooks();
+                
+                const container = document.getElementById('booksContainer');
+                if (container) {
+                    console.log('Container class after force grid:', container.className);
+                    console.log('Container computed styles:', {
+                        display: getComputedStyle(container).display,
+                        gridTemplateColumns: getComputedStyle(container).gridTemplateColumns,
+                        gap: getComputedStyle(container).gap
+                    });
+                }
+                
+                // Update button states
+                const gridBtn = document.getElementById('gridView');
+                const listBtn = document.getElementById('listView');
+                if (gridBtn) gridBtn.classList.add('active');
+                if (listBtn) listBtn.classList.remove('active');
+                
+                console.log('✅ Grid test completed');
+            } else {
+                console.error('BookTracker not available');
+            }
+        },
+        
+        forceGridLayout: () => {
+            console.log('🔧 Forcing grid layout...');
+            if (window.bookTracker) {
+                window.bookTracker.forceGridLayout();
+            } else {
+                const container = document.getElementById('booksContainer');
+                if (container) {
+                    container.className = 'books-container';
+                    container.style.display = 'grid';
+                    container.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                    container.style.gap = '1.5rem';
+                    console.log('✅ Grid layout forced via CSS (fallback)');
+                }
             }
         },
         

@@ -2,7 +2,7 @@
 console.log('🚀 Defining testBookTracker immediately...');
 
 // Cache busting helper
-window.CACHE_VERSION = '20250802';
+window.CACHE_VERSION = '20250802203500';
 console.log('📦 Cache version:', window.CACHE_VERSION);
 
 // Force reload if cache version changes
@@ -267,6 +267,7 @@ class BookTracker {
         const checkAndBind = (id, event, handler) => {
             const element = document.getElementById(id);
             if (element) {
+                console.log(`✅ Successfully bound ${event} event to element: ${id}`);
                 element.addEventListener(event, handler);
             } else {
                 console.warn(`Element with id '${id}' not found for event binding`);
@@ -432,8 +433,8 @@ class BookTracker {
                 publisher: volumeInfo.publisher || '',
                 publishedDate: volumeInfo.publishedDate || '',
                 pageCount: volumeInfo.pageCount || null,
-                coverImage: volumeInfo.imageLinks?.thumbnail?.replace(/zoom=\d+/, 'zoom=2') || '',
-                thumbnail: volumeInfo.imageLinks?.smallThumbnail || '',
+                coverImage: volumeInfo.imageLinks?.thumbnail?.replace(/zoom=\d+/, 'zoom=2').replace(/^http:/, 'https:') || '',
+                thumbnail: volumeInfo.imageLinks?.smallThumbnail?.replace(/^http:/, 'https:') || '',
                 description: volumeInfo.description || '',
                 averageRating: volumeInfo.averageRating || null,
                 ratingsCount: volumeInfo.ratingsCount || null
@@ -719,6 +720,16 @@ class BookTracker {
         }
     }
 
+    // Save to localStorage only (no sync)
+    async saveBooksToStorageOnly() {
+        try {
+            localStorage.setItem('bookTracker_books', JSON.stringify(this.books));
+            console.log('Books saved to localStorage (no sync)');
+        } catch (error) {
+            console.error('Error saving books to localStorage:', error);
+        }
+    }
+
     async loadBooksFromStorage() {
         try {
             // First try to load from API if connected
@@ -759,32 +770,67 @@ class BookTracker {
     async syncWithServer() {
         if (this.syncInProgress || !this.api.isOnline) return;
         
+        console.log(`[SYNC] Starting server sync`);
         this.syncInProgress = true;
         
         try {
             // Get books from server
             const serverBooks = await this.api.getBooks();
+            console.log(`[SYNC] Retrieved ${serverBooks.length} books from server`);
             
-            // Simple merge strategy: server wins for conflicts
+            // Improved merge strategy: preserve recent local changes
             if (serverBooks.length > 0) {
-                // Merge local and server books
                 const localBooksMap = new Map(this.books.map(book => [book.id, book]));
                 const serverBooksMap = new Map(serverBooks.map(book => [book.id, book]));
                 
-                // Start with server books (they take precedence)
-                const mergedBooks = [...serverBooks];
+                const mergedBooks = [];
+                
+                // First, add all server books, but check for newer local versions
+                serverBooks.forEach(serverBook => {
+                    const localBook = localBooksMap.get(serverBook.id);
+                    if (localBook) {
+                        // Compare modification dates - use newer version
+                        const serverModified = new Date(serverBook.dateModified || serverBook.dateAdded || 0);
+                        const localModified = new Date(localBook.dateModified || localBook.dateAdded || 0);
+                        
+                        console.log(`[SYNC] Comparing book "${localBook.title}":`, {
+                            serverModified: serverModified.toISOString(),
+                            localModified: localModified.toISOString(),
+                            serverCover: serverBook.coverImage,
+                            localCover: localBook.coverImage
+                        });
+                        
+                        if (localModified > serverModified) {
+                            console.log(`[SYNC] Using local version of "${localBook.title}" (newer)`);
+                            console.log(`[SYNC] Local cover image preserved:`, localBook.coverImage);
+                            mergedBooks.push(localBook);
+                            // Update server with local changes
+                            this.api.updateBook(localBook.id, localBook).catch(err => 
+                                console.error('Failed to sync local changes to server:', err)
+                            );
+                        } else {
+                            console.log(`[SYNC] Using server version of "${serverBook.title}" (newer or equal)`);
+                            console.log(`[SYNC] Server cover image used:`, serverBook.coverImage);
+                            mergedBooks.push(serverBook);
+                        }
+                    } else {
+                        mergedBooks.push(serverBook);
+                    }
+                });
                 
                 // Add local books that don't exist on server
                 this.books.forEach(localBook => {
                     if (!serverBooksMap.has(localBook.id)) {
+                        console.log(`[SYNC] Adding local-only book to merge:`, localBook.title);
                         mergedBooks.push(localBook);
-                        // Also send this book to server
+                        // Send new local book to server
                         this.api.createBook(localBook).catch(err => 
                             console.error('Failed to sync local book to server:', err)
                         );
                     }
                 });
                 
+                console.log(`[SYNC] Final merged books count:`, mergedBooks.length);
                 this.books = mergedBooks;
                 localStorage.setItem('bookTracker_books', JSON.stringify(this.books));
                 
@@ -990,9 +1036,18 @@ class BookTracker {
     }
 
     async handleFormSubmit(e) {
+        console.log('🚨 FORM SUBMIT TRIGGERED - START OF METHOD');
         e.preventDefault();
         
         const formData = new FormData(e.target);
+        
+        // Log form data for debugging
+        console.log('🔍 Form submission debug:');
+        console.log('  📋 All form data:');
+        for (let [key, value] of formData.entries()) {
+            console.log(`    ${key}: "${value}"`);
+        }
+        
         const bookData = {
             title: formData.get('title') || '',
             author: formData.get('author') || '',
@@ -1016,6 +1071,11 @@ class BookTracker {
             gifted: formData.has('gifted'),
             notes: formData.get('notes') || ''
         };
+
+        console.log('📦 Processed book data:');
+        console.log('  🖼️ Cover Image:', bookData.coverImage);
+        console.log('  📖 Title:', bookData.title);
+        console.log('  🆔 Edit ID:', this.currentEditId);
 
         try {
             if (this.currentEditId) {
@@ -1057,15 +1117,41 @@ class BookTracker {
     }
 
     async updateBook(id, bookData) {
+        console.log(`[UPDATE_BOOK] Starting update for book ID: ${id}`);
+        console.log(`[UPDATE_BOOK] Input bookData:`, bookData);
+        console.log(`[UPDATE_BOOK] Cover image in input:`, bookData.coverImage);
+        
         const index = this.books.findIndex(book => book.id === id);
         if (index !== -1) {
-            this.books[index] = { ...this.books[index], ...bookData };
-            await this.saveBooksToStorage();
+            console.log(`[UPDATE_BOOK] Found book at index ${index}:`, this.books[index]);
+            console.log(`[UPDATE_BOOK] Current cover image:`, this.books[index].coverImage);
+            
+            // Add modification timestamp
+            const updatedBook = { 
+                ...this.books[index], 
+                ...bookData, 
+                dateModified: new Date().toISOString() 
+            };
+            
+            console.log(`[UPDATE_BOOK] Updated book after merge:`, updatedBook);
+            console.log(`[UPDATE_BOOK] Cover image after merge:`, updatedBook.coverImage);
+            
+            this.books[index] = updatedBook;
+            
+            console.log(`[UPDATE_BOOK] Book in array after assignment:`, this.books[index]);
+            console.log(`[UPDATE_BOOK] Cover image in array:`, this.books[index].coverImage);
+            
+            // Save to localStorage first
+            await this.saveBooksToStorageOnly();
             
             // Sync with server
             try {
                 if (this.api.isOnline) {
-                    await this.api.updateBook(id, this.books[index]);
+                    console.log(`[UPDATE_BOOK] Syncing to server:`, updatedBook);
+                    console.log(`[UPDATE_BOOK] Cover image being sent to server:`, updatedBook.coverImage);
+                    
+                    await this.api.updateBook(id, updatedBook);
+                    console.log(`Successfully synced book "${updatedBook.title}" to server`);
                 }
             } catch (error) {
                 console.error('Failed to sync updated book with server:', error);
