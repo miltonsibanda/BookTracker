@@ -1,6 +1,21 @@
 // Simple testBookTracker definition at the very top
 console.log('🚀 Defining testBookTracker immediately...');
 
+// Cache busting helper
+window.CACHE_VERSION = '20250802';
+console.log('📦 Cache version:', window.CACHE_VERSION);
+
+// Force reload if cache version changes
+const STORAGE_KEY = 'booktracker_cache_version';
+const storedVersion = localStorage.getItem(STORAGE_KEY);
+if (storedVersion && storedVersion !== window.CACHE_VERSION) {
+    console.log('🔄 Cache version mismatch, clearing cache...');
+    localStorage.clear();
+    sessionStorage.clear();
+    location.reload(true);
+}
+localStorage.setItem(STORAGE_KEY, window.CACHE_VERSION);
+
 window.testBookTrackerSimple = {
     test: () => console.log('testBookTrackerSimple works!'),
     openModal: () => {
